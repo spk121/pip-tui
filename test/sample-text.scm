@@ -1,7 +1,7 @@
 ;; RASHOMON
 ;; By AKUTAGAWA Ryunosuke
 ;; From http://www.gutenberg.org/files/1982/1982-0.txt
-(define jp-string-1
+(define japanese-string
   "　或日の暮方の事である。一人の下人が、羅生門の下で雨やみを待っていた。　広い門
 の下には、この男の外に誰もいない。ただ、所々丹塗の剥げた、大きな円柱に、きりぎ
 りすが一匹とまっている。羅生門が、朱雀大路にある以上は、この男の外にも、雨やみ
@@ -11,7 +11,7 @@
 ;; Tou Peng Hsien Hua
 ;; by Aina Jushi
 ;; From http://www.gutenberg.org/files/25328/25328-0.txt
-(define cn-string-1
+(define chinese-string
   "不半月間，那豆藤在地上長將起來，彎彎曲曲依傍竹木隨著棚子牽纏滿了，卻比造的
 涼亭反透氣涼快。那些人家或老或少、或男或女，或拿根凳子，或掇張椅子，或鋪條
 涼蓆，隨高逐低坐在下面，搖著扇子，乘著風涼。鄉老們有說朝報的，有說新聞的，
