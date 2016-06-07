@@ -206,6 +206,12 @@ width."
 ;; ╚═╝
 (define *box-chars-double* "╔═╗║ ║╚═╝")
 
+;; Block-char box
+;; ▛▀▜
+;; ▌ ▐
+;; ▙▄▟
+(define *box-chars-block* "▛▀▜▌ ▐▙▄▟")
+
 (define BOX_TOP_LEFT 0)
 (define BOX_TOP 1)
 (define BOX_TOP_RIGHT 2)
