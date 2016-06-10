@@ -8,6 +8,7 @@
 
 	    tui-label-hide
 	    tui-label-show
+	    tui-label-resize
 	    ))
 
 (define *debug-port* (open-file "tui_label_debug.out" "w0"))
@@ -558,7 +559,8 @@ of 'top, 'center, or 'bottom."
 ;; various get sizes and offsets
 
 (define (tui-label-resize tui-label rows cols)
-  (resize (%tui-label-get-panel tui-label) rows cols))
+  (resize (%tui-label-get-panel tui-label) rows cols)
+  (tui-label-render-text! tui-label))
 
 (define (tui-label-getbegyx tui-label)
   (getbegyx (%tui-label-get-panel tui-label)))

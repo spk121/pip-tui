@@ -32,12 +32,12 @@
 (doupdate)
 (getch mainwin)
 
-(tui-label-hide label2)
+(tui-label-resize label2 21 21)
 (update-panels)
 (doupdate)
 (getch mainwin)
 
-(tui-label-show label2)
+(tui-label-resize label2 22 22)
 (update-panels)
 (doupdate)
 (getch mainwin)
