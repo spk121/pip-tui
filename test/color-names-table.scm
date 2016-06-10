@@ -1,0 +1,53 @@
+(use-modules (ncurses curses)
+	     (srfi srfi-1)
+	     (pip-tui pip-color-names)
+	     (pip-tui pip-colors))
+
+(define mainwin (initscr))
+(start-color!)
+(scrollok! mainwin #t)
+(define n 0)
+
+(define (string-list->comma-string sl)
+  (cond
+   ((null-list? sl)
+    "")
+   ((= 1 (length sl))
+    (car sl))
+   (else
+    (let loop ((entry (car sl))
+	       (rest (cdr sl))
+	       (output ""))
+      (if (null? rest)
+	  (string-append output ", " entry)
+	  ;; else
+	  (loop (car rest)
+		(cdr rest)
+		(if (string-null? output)
+		    entry
+		    ;;
+		    (string-append output ", " entry))))))))
+
+(do ((i 0 (1+ i)))
+    ((> i 255))
+  (let ((names (list-ref COLOR_NAMES i)))
+    (unless (null-list? names)
+      (if (< (color-index-get-brightness i) 0.3)
+	  (init-pair! (1+ i) COLOR_WHITE i)
+	  (init-pair! (1+ i) COLOR_BLACK i))
+      (attr-set! mainwin A_NORMAL (1+ i))
+      (let ((str (string-append (number->string i) ": "(string-list->comma-string names) " ")))
+	(if (> (+ (string-length str) (cadr (getyx mainwin)))(1- (cols)))
+	    (move mainwin (1+ (car (getyx mainwin))) 0))
+	(addstr mainwin str)
+	(attr-set! mainwin A_NORMAL 0)
+	(addstr mainwin " ")
+	(refresh mainwin)))))
+(getch mainwin)
+(endwin)
+
+(do ((i 0 (1+ i)))
+    ((> i 255))
+  (let ((names (list-ref COLOR_NAMES i)))
+    (unless (null-list? names)
+      (display (string-append (number->string i) ": "(string-list->comma-string names) " \n")))))
