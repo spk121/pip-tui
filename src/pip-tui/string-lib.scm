@@ -8,7 +8,9 @@
 	    string-pad-end-to-width
 	    string-pad-beginning-and-end-to-width
 	    string-untabify
-	    string-render))
+	    string-render
+	    substring-width)
+  #:re-export (string-width))
 
 ;; The line separator characters
 (define CR #\return)
@@ -246,6 +248,12 @@ are replaced with zero, one, or two spaces."
 ;; 	 (string-append str (string c))))
 ;;    ""
 ;;    in-string))
+
+(define (substring-width str width)
+  (let ((i (string-length str)))
+    (while (> (string-length (substring str 0 i)) width)
+      (set! i (1- i)))
+    (substring str 0 i)))
 
 (define (string-render str tabsize n-cells alignment bidi)
   "Given a string STR, this converts the string into a list of strings
