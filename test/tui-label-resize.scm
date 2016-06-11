@@ -21,9 +21,10 @@
 (define label2 (tui-label-new 10 40 20 20
 			      #:horizontal-padding 1
 			      #:vertical-padding 1
-			      #:color-pair-index (color-indices-get-color-pair-index COLOR_INDEX_GOLD COLOR_INDEX_PIPGREEN4)
-			      #:attributes A_BOLD
-			      #:border-type 'border-light
+			      #:color-pair-index (color-indices-get-color-pair-index COLOR_INDEX_PIPLIGHTGREEN3
+										     COLOR_INDEX_BLACK)
+			      #:attributes A_NORMAL
+			      #:border-type 'border-block
 			      #:ellipsize #t
 			      #:text "Radiation\n\nTwo centuries after the advent of nuclear war, radiation is still a very real danger in the Commonwealth.\n\nThe amount of rads you've accumulated is displayed in red in your HP bar."
 			      ))
