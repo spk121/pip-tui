@@ -1,0 +1,41 @@
+* Widgets
+** label
+   A block of text in a panel, maybe with a frame.
+** terminal
+   A block of text in a panel.  The characters are revealed one at a
+   time at some character-per-minute rate.  There is a sound for each
+   character when it appears.  There is a hard-drive grinding sound
+   when the characters start to print. Clicking the mouse makes all the
+   characters appear.  Clicking on the mouse makes a sound.
+** dialog
+   A block of text with one or two push-button choices.  Mousing over
+   a button highlights the button, and makes a sound. Clicking a
+   choice selects, and makes a noise.
+** alphabetical list
+   Can scroll with mouse wheel or push up/down arrows.  Each scroll
+   makes a noise.  Current element is highlighted.  Clicking on
+   element selects.
+** progress bar
+** block-drawing image
+** gps position
+** audio stream
+** ncurses menu
+** ncurses form   
+   
+* Libraries
+** Audio
+   Some widgets make noise.  Two paths to noises: guile-gstreamer,
+   or custom wrap Alsa, pulseaudio.
+** Audio streaming
+   The radio widget plays online radio stations.  guile-gstreamer is
+   probably the way to receive that data in the widget.  IceCast2 is
+   probably the way to send that data, for testing.
+** GPS Position
+   One widget shows the name of the region.  Can't do that without
+   a position database, but, we could show the GPS position.
+** Images
+   Some widgets have images.  Need a library to decode an image to
+   an ARGB32 array, and then convert that into ASCII graphics.
+** Raster graphics
+   To be really stupid, you could use the xterm Tektronic drawin
+   primitives, but, most terminals don't support those.

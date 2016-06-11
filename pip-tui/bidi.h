@@ -28,5 +28,5 @@ License along with Guile-Ncurses.  If not, see
 BIDI_API SCM bidi_string_logical_to_visual (SCM str, SCM alignment);
 BIDI_API SCM bidi_get_par_direction (SCM str);
 
-BIDI_LOCAL void bidi_init (void);
+BIDI_API void bidi_init (void);
 #endif
