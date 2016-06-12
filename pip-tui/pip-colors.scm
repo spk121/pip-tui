@@ -2,6 +2,7 @@
   #:use-module (ncurses curses)
   #:use-module (pip-tui pip-color-names)
   #:export (
+	    *xterm-colors*
 	    pip-green-level->color-index
 	    
 	    color-index-get-brightness
