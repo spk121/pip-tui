@@ -1,6 +1,7 @@
 #include <libguile.h>
 #include <png.h>
 #include <stdio.h>
+#include "pip_png.h"
 
 int width, height;
 png_byte color_type;
@@ -8,7 +9,7 @@ png_byte bit_depth;
 png_bytep *row_pointers;
 
 
-SCM read_png_file(SCM sfilename) {
+SCM pip_png_read(SCM sfilename) {
   
   char *filename = scm_to_locale_string (sfilename);
   
@@ -83,10 +84,9 @@ SCM read_png_file(SCM sfilename) {
 }
 
 void
-png_init ()
+pip_png_init ()
 {
-  scm_c_define_gsubr ("%read-png", 1, 0, 0,
-                      read_png_file);
+  scm_c_define_gsubr ("%read-png", 1, 0, 0, pip_png_read);
 }
 
 #if 0

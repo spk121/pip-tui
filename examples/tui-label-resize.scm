@@ -10,15 +10,16 @@
 
 
 
-(define label1 (tui-label-new 3 0 8 20
+(define label1 (tui-label-new 0 0 5 20
 			      #:horizontal-padding 2
 			      #:vertical-padding 1
 			      #:color-pair-index (color-indices-get-color-pair-index COLOR_INDEX_BLUE COLOR_INDEX_BLACK)
 			      #:border-type 'border-light
+			      #:horizontal-alignment 'center
 			      #:text "Later that day, he ate a carrot."))
 
 
-(define label2 (tui-label-new 10 40 20 20
+(define label2 (tui-label-new 10 1 20 20
 			      #:horizontal-padding 1
 			      #:vertical-padding 1
 			      #:color-pair-index (color-indices-get-color-pair-index COLOR_INDEX_PIPLIGHTGREEN3
@@ -26,22 +27,19 @@
 			      #:attributes A_NORMAL
 			      #:border-type 'border-block
 			      #:ellipsize #t
+			      #:vertical-alignment 'center
 			      #:text "Radiation\n\nTwo centuries after the advent of nuclear war, radiation is still a very real danger in the Commonwealth.\n\nThe amount of rads you've accumulated is displayed in red in your HP bar."
 			      ))
+(curs-set 0)
 
-(update-panels)
-(doupdate)
-(getch mainwin)
-
-(tui-label-resize label2 21 21)
-(update-panels)
-(doupdate)
-(getch mainwin)
-
-(tui-label-resize label2 22 22)
-(update-panels)
-(doupdate)
-(getch mainwin)
+(do ((i 0 (1+ i)))
+    ((> i 72))
+  (clear mainwin)
+  (tui-label-resize label2 (1+ (quotient i 4)) i)
+  (tui-label-resize label1 5 i)
+  (update-panels)
+  (doupdate)
+  (usleep 500000))
 
 (endwin)
 

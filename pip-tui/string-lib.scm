@@ -201,7 +201,7 @@ the STR is returned."
   (let ((len (string-width str)))
     ;; (format #t "in string-pad len ~s width ~s str:~s~%" len width str)
     (if (< len width)
-	(string-append (make-string (- width len) #\`) str)
+	(string-append (make-string (- width len) #\space) str)
 	;; else
 	str)))
 
