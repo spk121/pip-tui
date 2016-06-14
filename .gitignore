@@ -46,10 +46,7 @@ config.h.in
 .dirstamp
 .libs
 ABOUT-NLS
-GNUmakefile
 INSTALL
-Makefile
-Makefile.in
 TAGS
 ar-lib
 autom4te.cache
