@@ -1,27 +1,100 @@
 * Widgets
-** label
+** TODO label
+   Param: label text
+
    A block of text in a panel, maybe with a frame.
-** terminal
+
+   It has no return value.
+** TODO terminal
+   Param: text maybe containing selectable links
+
    A block of text in a panel.  The characters are revealed one at a
    time at some character-per-minute rate.  There is a sound for each
    character when it appears.  There is a hard-drive grinding sound
    when the characters start to print. Clicking the mouse makes all the
    characters appear.  Clicking on the mouse makes a sound.
-** dialog
+
+   Some on-screen text may be selectable links.  Text denoted as
+   selectable links are enclosed in square brackers. Mousing over them
+   highlights them. Clicking them selects.
+
+   Returns the selected on-screen link, if any.
+** TODO big dialog
+   Param: text button-one-text button-two-text
+
    A block of text with one or two push-button choices.  Mousing over
    a button highlights the button, and makes a sound. Clicking a
-   choice selects, and makes a noise.
-** alphabetical list
-   Can scroll with mouse wheel or push up/down arrows.  Each scroll
-   makes a noise.  Current element is highlighted.  Clicking on
-   element selects.
-** progress bar
-** block-drawing image
-** gps position
-** audio stream
-** ncurses menu
-** ncurses form   
+   choice selects, and makes a noise.  There is a frame.
+
+   It returns the pressed button.
+** TODO inline menu
+   Param: an alist of keynames and short labels.
+
+   A horizontally oriented menu of choices.  Each choice has
+   a letter in a circle that indicate the shortcut key to press
+   to choose that choice.
+
+   Returns the selected element.
+** TODO tab frame
+   Param: a list of tab names?
+
+   This is a top-bar of tabs. Selecting a tab is supposed
+   to bring up a new screen of data, hiding panels not
+   associated with the selected tab, and showing panels associated
+   with the selected tab.
+
+   This isn't supposed to return anything, but, instead switch
+   contexts.
+** TODO ncurses menu - simple list
+   Param: a list
+
+   Given a list, it uses the menu driver to help select
+   an element of the list.
+
+   Returns the selected item.
+** TODO ncurses menu - key value list
+   Param: an alist
+
+   Like the LIST, but, with two columns, a key and
+   a description.
+
+   Returns selected item.
+** ncurses menu with explanation
+   Param: an alist
+
+   Like the LIST, but, On the left side, the keys of the line, one per
+   line.  On the right side, the val of the highlighted key, which is
+   supposed to be an explanation of KEY.  The KEY is expected to fit
+   on one line, but, the EXPLANATION can be multiple lines.
+
+   Returns selected item.
+** TODO progress bar
+   Param: a key and a fraction
+
+   A label and a progress bar.
+
+   No return value.
+** TODO block-drawing image
+   Param: an array of argb32
+
+   Draws the array with block drawing characters.
+
+   No return value
+** TODO ncurses form
+   Param: ?
+
+   Somehow takes a simple scheme construct and automagically
+   creates a form using the ncurses form library.
    
+   Somehow returns the data in the form.
+** TODO gps position
+   This queries the gpsd daemon for the current position of the computer
+   and displays the lat, lon.  Ideally, it would also conver that
+   lat/lon into a neighborhood name.
+
+** TODO audio stream
+   This non-visual widget plays an ogg stream from Icecast.
+
 * Libraries
 ** Audio
    Some widgets make noise.  Two paths to noises: guile-gstreamer,
@@ -39,3 +112,4 @@
 ** Raster graphics
    To be really stupid, you could use the xterm Tektronic drawin
    primitives, but, most terminals don't support those.
+   
