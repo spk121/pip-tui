@@ -67,20 +67,26 @@ SCM pip_png_read(SCM sfilename) {
 
   png_read_image(png, row_pointers);
 
-  SCM bv = scm_c_make_bytevector (height * width * 4);
+  /* SCM arr = scm_make_typed_array (scm_from_locale_symbol ("u32"), */
+  /* 				  scm_from_uint32 (0), */
+  /* 				  scm_list_2 (scm_list_2 (scm_from_int (0), scm_from_int (height - 1)), */
+  /* 					      scm_list_2 (scm_from_int (0), scm_from_int (width - 1)))); */
+  char cmd[200];
+  sprintf(cmd, "(make-typed-array 'u32 0 '(0 %d) '(0 %d))", height - 1, width - 1);
+  SCM arr = scm_c_eval_string (cmd);
+  
   for(int y = 0; y < height; y++) {
     png_bytep row = row_pointers[y];
     for(int x = 0; x < width; x++) {
       png_bytep px = &(row[x * 4]);
-      scm_bytevector_u32_set_x (bv, scm_from_int (4 * (y * width + x)),
-				scm_from_uint32 ( *(uint32_t *)px),
-				scm_native_endianness());
+      scm_array_set_x (arr, scm_from_uint32 ( *(uint32_t *)px),
+  		       scm_list_2 (scm_from_int (y), scm_from_int (x)));
     }
   }
   
   free (filename);
   fclose(fp);
-  return scm_list_3 (scm_from_int (width), scm_from_int (height), bv);
+  return arr;
 }
 
 void

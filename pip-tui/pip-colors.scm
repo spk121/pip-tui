@@ -1,4 +1,5 @@
 (define-module (pip-tui pip-colors)
+  #:use-module (srfi srfi-1)
   #:use-module (ncurses curses)
   #:use-module (pip-tui pip-color-names)
   #:export (
@@ -11,6 +12,7 @@
 
 	    color-indices-get-color-pair-index
 	    pip-green-levels-get-color-pair-index
+	    palette-match
 	    ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -299,6 +301,7 @@
 to an xterm color number"
   (list-ref PIP_GREEN_INDEX_COLOR_INDICES c))
 
+
 (define (rgb-to-brightness RGB)
   "Converts an RGB colorref #xRRGGBB into a brighness from 0.0 to 1.0"
   (let ((D (/ 1.0 255.0)))
@@ -309,10 +312,74 @@ to an xterm color number"
 	  (* G 0.6)
 	  (* B 0.1)))))
 
+(define (rgb-to-xyz cR cG cB)
+  "Converts from one color space to another"
+  (let ((R (/ cR 255.0))
+	(G (/ cG 255.0))
+	(B (/ cB 255.0)))
+    (define (transform1 X)
+      (if (> X 0.04045)
+	  (* (expt (/ (+ X 0.055) 1.055) 2.4) 100)
+	  (* (/ X 12.92) 100)))
+    (set! R (transform1 R))
+    (set! G (transform1 G))
+    (set! B (transform1 B))
+    (list
+     (+ (* R 0.4124) (* G 0.3576) (* B 0.1805))
+     (+ (* R 0.2126) (* G 0.7152) (* B 0.0722))
+     (+ (* R 0.0193) (* G 0.1192) (* B 0.9505)))))
+
+(define (xyz-to-lab cX cY cZ)
+  "Converts from one color space to another"
+  (let ((ref_Y 100.0)
+	(ref_Z 108.883)
+	(ref_X 95.047))
+    (let ((Y (/ cY ref_Y))
+	  (Z (/ cZ ref_Z))
+	  (X (/ cX ref_X)))
+      (define (transform1 a)
+	(if (> a 0.008856)
+	    (expt a (/ 1 3))
+	    (+ (* a 7.787) 0.00886)))
+      (list
+       (- (* 116 (transform1 Y)) 16)
+       (* 500 (- (transform1 X) (transform1 Y)))
+       (* 200 (- (transform1 Y) (transform1 Z)))))))
+
+(define (color-distance R1 G1 B1 R2 G2 B2)
+ "Computes a metric of how similar two colors are. Anything
+less that about 2.3 looks like the same color."
+  (let* ((LAB1 (%rgb-to-lab R1 G1 B1))
+	 (LAB2 (%rgb-to-lab R2 G2 B2)))
+    (sqrt (+ (expt (- (first LAB1) (first LAB2)) 2)
+	     (expt (- (second LAB1) (second LAB2)) 2)
+	     (expt (- (third LAB1) (third LAB2)) 2)))))
+
+
+(define (palette-match list-of-indices R G B)
+  "Given a list of color indices into the xterm palette
+and an R G B color, it returns the color index in the list
+that most closely matches R G B."
+  (let ((best
+	  (fold
+	   (lambda (idx prev)
+	     ;; IDX is the current color index
+	     ;; PREV is (best-color-distance best-match-index deltaR deltaG deltaB)
+	     (let* ((C2 (cadr (list-ref *xterm-colors* idx)))
+		    (R2 (ash (logand #xFF0000 C2) -16))
+		    (G2 (ash (logand #x00FF00 C2) -8))
+		    (B2 (logand #x0000FF C2))
+		    (dist (%color-distance R G B R2 G2 B2)))
+	       (if (< dist (car prev))
+		   (list dist idx (- R2 R) (- G2 G) (- B2 B))
+		   prev)))
+	   '(10000000 0 255 255 255)			; (best-color-index . best-match-index)
+	   list-of-indices)))
+    (values (second best) (third best) (fourth best) (fifth best))))
+
 (define (color-index-get-brightness idx)
   "Returns an intensity between 0.0 (black) and 1.0 (white)"
   (rgb-to-brightness (cadr (list-ref *xterm-colors* idx))))
-
 
 (define (pip-green-level-get-brightness i)
   "Converts a pip green level to a brightness value between 0.0 and
@@ -357,3 +424,4 @@ the color pair index associated with this pair of green levels."
    (pip-green-level->color-index bg)))
 
 
+(load-extension "piptui.so" "pip_colors_init")

@@ -1,5 +1,69 @@
 SHELL=/bin/sh
 
+# The Package identifiers
+export PACKAGE = pip-tui
+export PACKAGE_BUGREPORT = mike@lonelycactus.com
+export PACKAGE_NAME = pip-tui
+export PACKAGE_STRING = pip-tui 0.0
+export PACKAGE_TARNAME = pip-tui
+export PACKAGE_URL = http://www.lonelycactus.com/software/piptui/
+export PACKAGE_VERSION = 0.1
+
+################################################################
+# EXECUTABLES
+
+export MKDIR = mkdir
+export GUILD:=guild
+export GUILE = guile
+export GUILE_EFFECTIVE_VERSION=2.0
+export INSTALL = /usr/bin/install --verbose --compare
+export INSTALL_DATA = ${INSTALL} --mode=644
+export INSTALL_PROGRAM = ${INSTALL}
+
+################################################################
+# STANDARD INSTALL DIRECTORY VARIABLES
+
+# DESTDIR is prepended to each installed target file
+# e.g. $(DESTDIR)$(bindir)/foo
+# Do not specify DESTDIR in the makefile at all
+
+export prefix = /usr/local
+export exec_prefix = ${prefix}
+export bindir = ${exec_prefix}/bin
+export sbindir = ${exec_prefix}/sbin
+export libexecdir = ${exec_prefix}/libexec
+export datarootdir = ${prefix}/share
+export datadir = ${datarootdir}
+export sysconfdir = ${prefix}/etc
+export sharedstatedir = ${prefix}/com
+export localstatedir = ${prefix}/var
+export includedir = ${prefix}/include
+export docdir = ${datarootdir}/doc/${PACKAGE}
+export infodir = ${datarootdir}/info
+export pdfdir = ${docdir}
+export lispdir = ${datarootdir}/emacs/site-lisp
+export localedir = ${datarootdir}/locale
+
+export pkgincludedir = $(includedir)/${PACKAGE}
+export pkglibdir = $(libdir)/${PACKAGE}
+
+################################################################
+# NON-STANDARD INSTALL DIRECTORY VARIABLES
+
+# Installed .scm scheme libraries go here
+export guilesitedir :=\
+ $(shell pkg-config guile-$(GUILE_EFFECTIVE_VERSION) --variable=sitedir)
+export pkgguilesitedir = ${guilesitedir}/${PACKAGE}
+
+# Compiled libguile-*.so extention libraries go here
+export guileextensiondir :=\
+ $(shell pkg-config guile-$(GUILE_EFFECTIVE_VERSION) --variable=extensiondir)
+
+# Compiled .go scheme libraries go here
+export guileobjectdir :=\
+ $(shell $(GUILE) -c "(display (cadr %load-compiled-path))")
+export pkgguileobjectdir = $(guileobjectdir)/${PACKAGE}
+
 srcdir = .
 
 ################################################################
@@ -29,17 +93,19 @@ LDFLAGS := -shared -fPIC\
 LIBS :=\
  $(shell pkg-config guile-$(GUILE_EFFECTIVE_VERSION) --libs-only-l)\
  $(shell pkg-config fribidi --libs-only-l) \
- $(shell pkg-config libpng --libs-only-l)
+ $(shell pkg-config libpng --libs-only-l) \
+ -lm
 
 ################################################################
 # SOURCES
 
-LIB_SOURCES = bidi.c pip_png.c
-LIB_HEADERS = bidi.h pip_png.h visibility.h
+LIB_SOURCES = bidi.c pip_png.c colors.c
+LIB_HEADERS = bidi.h pip_png.h colors.h visibility.h
 LIB_OBJECTS = $(patsubst %.c,%.o,$(LIB_SOURCES))
 
 SCM_SOURCES = string-lib.scm fribidi.scm unistring.scm tui-label.scm \
- pip-colors.scm pip-color-names.scm tui-progress-bar.scm border.scm
+ pip-colors.scm pip-color-names.scm tui-progress-bar.scm border.scm \
+ pip-image.scm
 SCM_OBJECTS = $(patsubst %.scm,%.go,$(SCM_SOURCES))
 
 all: $(SCM_OBJECTS) piptui.so
@@ -62,6 +128,8 @@ piptui.so: $(LIB_OBJECTS)
 bidi.o: bidi.c bidi.h visibility.h
 
 png.o: png.c png.h visibility.h
+
+colors.o: colors.c colors.h
 
 install: installdirs all
 	$(INSTALL_DATA) $(SCM_SOURCES) $(DESTDIR)$(pkgguilesitedir)

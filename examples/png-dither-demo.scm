@@ -1,0 +1,31 @@
+(use-modules (ice-9 receive)
+	     (pip-tui tui-progress-bar)
+	     (pip-tui pip-color-names)
+	     (pip-tui pip-colors)
+	     (pip-tui png)
+	     (pip-tui pip-image)
+	     (ncurses curses)
+	     (ncurses panel))
+
+(define img (read-png "./images/gaucho.png"))
+;; (write (array? img))
+;; (newline)
+;; (write img) (newline)
+;; (write (array-ref img 0 0))
+;; (newline)
+;; (write img)
+(define pgr (image->pseudographics img (iota 16) #f))
+;; (write pgr)
+;; (newline)
+
+
+(setlocale LC_ALL "")
+(define mainwin (initscr))
+(start-color!)
+(curs-set 0)
+
+(render-image mainwin img (iota 256) #t)
+(refresh mainwin)
+(getch mainwin)
+(endwin)
+

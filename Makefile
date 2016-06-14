@@ -13,9 +13,9 @@ export PACKAGE_VERSION = 0.1
 # EXECUTABLES
 
 export MKDIR = mkdir
-export GUILD = guild
+export GUILD:=guild
 export GUILE = guile
-export GUILE_EFFECTIVE_VERSION = 2.0
+export GUILE_EFFECTIVE_VERSION=2.0
 export INSTALL = /usr/bin/install --verbose --compare
 export INSTALL_DATA = ${INSTALL} --mode=644
 export INSTALL_PROGRAM = ${INSTALL}
