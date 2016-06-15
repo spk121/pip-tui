@@ -16,16 +16,16 @@ To build, the code requires or could someday require
 * maybe eventually *gstreamer* 
 * maybe eventually *guile-gstreamer* if that can be resurrected
 * maybe eventually *guile-mysql* or *guile-db*
-* maybe eventually gpsd
+* maybe eventually *gpsd*
 
 ## TODO
 ### Widget Containers
 - [ ] Notebook: a tabbed notebook container
 
 ### Widgets
-- [ ] Label: auto wrapping text in a box
-- [ ] Progress Bar: a short text and a progress bar
-- [ ] Terminal: auto wrapping text that reveals itself one character at a time, with hyperlinks
+- [x] Label: auto wrapping text in a box
+- [x] Progress Bar: a short text and a progress bar
+- [ ] Terminal: auto wrapping text that reveals itself one character at a time, with links
 - [ ] Menu Bar: a small menu, arranged horizontally in one line
 - [ ] Message Dialog: wrapped, centered text in a frame, with one or two buttons
 - [ ] Menu: a scrolling list of elements, where one can be selected
