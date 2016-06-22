@@ -59,7 +59,7 @@
    a description.
 
    Returns selected item.
-** ncurses menu with explanation
+** TODO ncurses menu with explanation
    Param: an alist
 
    Like the LIST, but, On the left side, the keys of the line, one per
@@ -87,6 +87,9 @@
    creates a form using the ncurses form library.
    
    Somehow returns the data in the form.
+** TODO text editor
+   A text editing widget with a OK/Cancel
+   buttons.
 ** TODO gps position
    This queries the gpsd daemon for the current position of the computer
    and displays the lat, lon.  Ideally, it would also conver that
