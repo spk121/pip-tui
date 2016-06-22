@@ -50,11 +50,10 @@ To build, the code requires or could someday require
 - [ ] Security camera control
 - [ ] Retro-futurist blog engine
 
-## Thoughts
+## Thought of the Day
 
-To try to make this Schemey, each widget should be a View/Controller
-attached to some sort of model which should be a simple Guile object.
+Best to put shared rendering ops in their own library.
 
-There should be a global update function that will query all the
-Models and update their View/Controllers, using "panels-map" or
-"panels-for-each".
+If I really want to do fallback rendering for Latin1, it would take some effort.
+
+Guile's GStreamer support is rotten; my Guile Pulseaudio support library won't help with playing Icecast streams.
