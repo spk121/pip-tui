@@ -103,9 +103,21 @@ LIB_SOURCES = bidi.c pip_png.c colors.c
 LIB_HEADERS = bidi.h pip_png.h colors.h visibility.h
 LIB_OBJECTS = $(patsubst %.c,%.o,$(LIB_SOURCES))
 
-SCM_SOURCES = string-lib.scm fribidi.scm unistring.scm tui-label.scm \
- pip-colors.scm pip-color-names.scm tui-progress-bar.scm border.scm \
- pip-image.scm
+SCM_SOURCES = \
+ border.scm \
+ data-lib.scm \
+ fribidi.scm \
+ pip-color-names.scm \
+ pip-colors.scm \
+ pip-image.scm \
+ render-lib.scm \
+ string-lib.scm \
+ time.scm \
+ tui-label.scm \
+ tui-progress-bar.scm \
+ typecheck.scm \
+ unistring.scm \
+ tui-terminal.scm
 SCM_OBJECTS = $(patsubst %.scm,%.go,$(SCM_SOURCES))
 
 all: $(SCM_OBJECTS) piptui.so

@@ -1,7 +1,9 @@
 (define-module (pip-tui string-lib)
+  #:use-module (ice-9 optargs)
+  #:use-module (srfi srfi-1)
+  #:use-module (pip-tui typecheck)
   #:use-module (pip-tui unistring)
   #:use-module (pip-tui fribidi)
-  #:use-module (ice-9 optargs)
   #:export (string-convert-crlf-to-lf
 	    string-remove-trailing-whitespace
 	    string-pad-beginning-to-width
@@ -9,8 +11,19 @@
 	    string-pad-beginning-and-end-to-width
 	    string-untabify
 	    string-render
-	    substring-width)
+	    substring-width
+	    string-trim-right-to-width
+	    substring-list
+	    string-find-brace-pairs
+	    string-list-find-brace-pairs
+	    string-list-truncate!)
   #:re-export (string-width))
+
+(define-syntax append-val!
+  (syntax-rules()
+    ((append-val! lst entry)
+     (set! lst (append lst (list entry))))))
+
 
 ;; The line separator characters
 (define CR #\return)
@@ -74,7 +87,7 @@
 
 (define UNICODE_CONTROL_PICTURES
   '(#\␀					; NUL
-    #\␁ 					; SOL
+    #\␁					; SOL
     #\␂					; STX
     #\␃					; ETX
     #\␄					; EOT
@@ -172,6 +185,12 @@ replace with a single linefeed."
      (else
       out-string))))
 
+(define* (substring-width str start #:optional end)
+  "Compute the number of cells occupied by a substring of STR"
+  (if end
+      (string-width (substring str start end))
+      (string-width (substring str start))))
+
 (define (string-remove-trailing-whitespace str)
   "Returns a copy of STR, not including any whitespace at the end of
 the string."
@@ -249,7 +268,9 @@ are replaced with zero, one, or two spaces."
 ;;    ""
 ;;    in-string))
 
-(define (substring-width str width)
+(define (string-trim-right-to-width str width)
+  "Return the longest substring of str that fits in WIDTH
+cells."
   (let ((i (string-length str)))
     (while (> (string-length (substring str 0 i)) width)
       (set! i (1- i)))
@@ -304,6 +325,91 @@ strings are converted from logical order to visual order."
      string-list)))
     
 
+(define (string-find-brace-pairs str left-brace right-brace)
+  "Given a string STR and two characters LEFT-BRACE and RIGHT-BRACE,
+this returns the a list of pairs of string indices of matching
+opening and closing braces. It does not handle nesting of braces."
+  (let ([i 0]
+	[len (string-length str)]
+	[left-brace-found #f]
+	[brace-pairs '()])
+    (do ([i 0 (1+ i)]) ([= i len])
+      (let ([char-cur (string-ref str i)])
+	(cond
+	 [(and (not left-brace-found)
+	       (char=? left-brace char-cur))
+	  (set! left-brace-found i)]
+	 [(and left-brace-found (char=? right-brace char-cur))
+	  (append-val! brace-pairs (list left-brace-found i))
+	  (set! left-brace-found #f)]
+	 [else
+	  ;; Do nothing
+	  #f])))
+    brace-pairs))
+
+(define* (string-list-truncate-entry! string-list line pos-start #:optional pos-end)
+  (list-set! string-list line
+	     (if pos-end
+		 (substring (list-ref string-list line) pos-start pos-end)
+		 (substring (list-ref string-list line) pos-start))))
+
+(define (substring-list str-list line-start pos-start line-end pos-end)
+  (if (= line-start line-end)
+      ;; Single-line substring
+      (let ((str (list-ref str-list line-start)))
+	(list (substring str pos-start pos-end)))
+      ;; Multiple-line substring
+      (let ([sublist (list-head (list-tail str-list line-start) (1+ (- line-end line-start)))])
+	(string-list-truncate-entry! sublist 0 pos-start)
+	(string-list-truncate-entry! sublist (1- (length str-list)) 0 pos-end)
+	sublist)))
+
+(define (string-list-find-brace-pairs str-list left-brace right-brace)
+  "Given a list of strings STR-LIST and two characters LEFT-BRACE and RIGHT-BRACE,
+this returns the a list of pairs of string indices of matching opening
+and closing braces. Each entry of the output list has the form
+ROW-START, COL-START, ROW-END, COL-END. It does not handle nesting of braces."
+  (let ([j 0] [i 0]
+	[maxj (length str-list)]
+	[left-brace-found #f]
+	[brace-pairs '()])
+    (do ([j 0 (1+ j)]) ([= j maxj])
+      (let* ([str (list-ref str-list j)]
+	     [len (string-length str)])
+	(do ([i 0 (1+ i)]) ([= i len])
+	  (let ([char-cur (string-ref str i)])
+	    (cond
+	     [(and (not left-brace-found) (char=? left-brace char-cur))
+	      (set! left-brace-found (list j i))]
+	     
+	     [(and left-brace-found (char=? right-brace char-cur))
+	      (append-val! brace-pairs (append left-brace-found (list j i)))
+	      (set! left-brace-found #f)]
+	     [else
+	      ;; Do nothing
+	      #f])))))
+    brace-pairs))
+
+(define (string-list-truncate! strlist N)
+  "Returns a list of strings with no more than N codepoints.  The original
+list may be modified in the process."
+  (cond
+   [(null? strlist)
+    strlist]
+   [(= N 0)
+    (take! strlist 0)]
+   [else
+    (let loop ([i 0] [n 0])
+      (let* ([str (list-ref strlist i)]
+	     [len (string-length str)])
+	(cond
+	 [(<= N (+ n len))
+	  (list-set! strlist i (substring str 0 (- N n)))
+	  (take! strlist (1+ i))]
+	 [(= (1+ i) (length strlist))
+	  strlist]
+	 [else
+	  (loop (1+ i) (+ n len))])))]))
 
 ;; (setlocale LC_ALL "")
 ;; (string-pad-beginning-to-width "hello" 40)

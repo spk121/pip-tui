@@ -1,13 +1,15 @@
 (define-module (pip-tui tui-progress-bar)
+  #:use-module (ice-9 optargs)
+  #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-9)
   #:use-module (ncurses curses)
+  #:use-module (pip-tui typecheck)
   #:use-module (pip-tui string-lib)
   #:use-module (pip-tui pip-colors)
   #:use-module (pip-tui pip-color-names)
   #:use-module (pip-tui coords)
   #:use-module (pip-tui border)
-  #:use-module (ice-9 optargs)
-  #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-9)
+  #:use-module (pip-tui render-lib)
   #:export (
 	    ;; From tui-progress-bar
 	    tui-progress-bar-new
@@ -114,58 +116,33 @@
 ;;; bar-fg-color     an xterm color index
 ;;; bar-bg-color     an xterm color index
 
-;; The 8 horizontal blocks
-;; Left 1/8   ▏ U+258f
-;; Left 1/4   ▎ U+258e
-;; Left 3/8   ▍ U+258d
-;; Left 1/2   ▌ U+258c
-;; Left 5/8   ▋ U+258b
-;; Left 3/4   ▊ U+258a
-;; Left 7/8   ▉ U+2589
-;; Full Block █ U+2588
-(define *fraction-blocks* " ▏▎▍▌▋▊▉█")
-
 (define (compute-coords-list TPB)
   "Given a TUI-PROGRESS_BAR, this returns a coords struct containing the
 start-y, start-x, height, and width for the window."
   (window-relative-coords (%tui-progress-bar-get-panel TPB)))
 
-(define (render-background TPB coords-list)
+(define (do-background TPB coords-list)
   "Given a TUI-PROGRESS-BARL and a coords-list, a 4-element list
 containing start-y, start-x height, and width.  This paints the window
 with spaces, and returns the same coords list."
-  (let ((start-y (coords-get-start-y coords-list))
-	(start-x (coords-get-start-x coords-list))
-	(height (coords-get-height coords-list))
-	(width (coords-get-width coords-list))
-	(color (%tui-progress-bar-get-bg-color TPB))
+  (let ((color (%tui-progress-bar-get-bg-color TPB))
 	(panel (%tui-progress-bar-get-panel TPB)))
+    (render-background panel
+		       #:coords-list coords-list
+		       #:bg-color color)))
 
-    (cond
-     ;; If this window has no size, do nothing
-     ((coords-zero-area? coords-list)
-      coords-list)
-     
-     ;; If this window has any size, draw it with the background
-     (else
-
-      (attr-set! panel A_NORMAL (color-indices-get-color-pair-index COLOR_INDEX_BLACK color))
-      (let ((space (normal #\space)))
-	(do ((j 0 (1+ j)))
-	    ((>= j height))
-	  (do ((i 0 (1+ i)))
-	      ((>= i width))
-	    (addch panel space #:y (+ start-y j) #:x (+ start-x i)))))
-      coords-list))))
-
-(define (render-border TPB coords-list)
+(define (do-border TPB coords-list)
   (let ((panel (%tui-progress-bar-get-panel TPB))
 	(fg-color (%tui-progress-bar-get-border-color TPB))
 	(bg-color (%tui-progress-bar-get-bg-color TPB))
 	(type (%tui-progress-bar-get-border-type TPB)))
-    (border-draw-on-panel panel coords-list fg-color bg-color type)))
+    (render-border panel
+		   #:coords-list coords-list
+		   #:fg-color fg-color
+		   #:bg-color bg-color
+		   #:border-type type)))
 
-(define (render-padding TPB coords-list)
+(define (do-padding TPB coords-list)
   "Given a TUI-PROGRESS-BAR and COORDS-LIST, a 4-element list
 containing start-y, start-x, height, and width for the window inside
 the border, this computes the effect of the the padding, if there is
@@ -173,33 +150,13 @@ any. It returns a 4-element list (start-y, start-x, width, height) of
 the window region inside the padding.
 
 The padding should actually have been drawn by render-background."
-  (let ((start-y (coords-get-start-y coords-list))
-	(start-x (coords-get-start-x coords-list))
-	(height (coords-get-height coords-list))
-	(width (coords-get-width coords-list))
-	(hpad (%tui-progress-bar-get-horizontal-padding TPB))
+  (let ((hpad (%tui-progress-bar-get-horizontal-padding TPB))
 	(vpad (%tui-progress-bar-get-vertical-padding TPB)))
+    (render-padding #:coords-list coords-list
+		    #:hpad hpad
+		    #:vpad vpad)))
 
-    (cond
-
-     ;; If there is no padding, do nothing
-     ((and (zero? hpad) (zero? vpad))
-      coords-list)
-
-     ;; If this window has no size, do nothing
-     ((coords-zero-area? coords-list)
-      coords-list)
-
-     ;; If all that remains of the window is padding
-     ((or (<= width (* 2 hpad))
-	  (<= height (* 2 vpad)))
-      (coords-new start-y start-x 0 0))
-
-     ;; If there is some space inside the padding
-     (else
-      (coords-adjust coords-list vpad hpad (* -2 vpad) (* -2 hpad))))))
-
-(define (render-text TPB coords-list)
+(define (do-text TPB coords-list)
   "Given a TUI-PROGRESS-BAR and a coords list, this
 renders the text portion of the progress bar.  It returns
 a coords-list of the remaining portion of the window."
@@ -212,70 +169,42 @@ a coords-list of the remaining portion of the window."
 	(fg-color (%tui-progress-bar-get-text-color TPB))
 	(bg-color (%tui-progress-bar-get-bg-color TPB))
 	(panel (%tui-progress-bar-get-panel TPB)))
+    (render-text panel text
+		 #:coords-list coords-list
+		 #:attr attr
+		 #:fg-color fg-color
+		 #:bg-color bg-color)
+    (if (eqv? (%tui-progress-bar-get-text-location TPB) 'top)
+	;; If the text is above the progress bar, we have one
+	;; fewer available line.
+	(coords-adjust coords-list 1 0 -1 0)
+	;; If the text is to the left of the progress bar, we remove
+	;; space from the left of the line.
+	;; Remember to remove an extra cell for the gutter.
+	;; FIXME?: should rely on the coords-list from render-text to do this
+	;; width calculation, somehow, instead of doing it here.
+	(let ((text-width (string-width (string-trim-right-to-width text (1- width)))))
+	  (coords-adjust coords-list 0 (1+ text-width) 0 (- (1+ text-width)))))))
 
-    
-    (cond
-     ((coords-zero-area? coords-list)
-      ;; There is no room to draw anything
-      coords-list)
-
-     (else
-      (let* ((text2 (substring-width text (1- width))) ; Note we subtract and extra 1 cell for the gutter between the text and the bar
-	     (text2-width (string-width text2)))  ; the length of that
-					; text, which might
-					; be one cell less
-					; that WIDTH for CJK
-	(attr-set! panel attr 
-		   (color-indices-get-color-pair-index fg-color bg-color))
-	(addstr panel text2 #:y start-y #:x start-x)
-	(if (eqv? (%tui-progress-bar-get-text-location TPB) 'top)
-	    ;; If the text is above the progress bar, we have one
-	    ;; fewer available line.
-	    (coords-adjust coords-list 1 0 -1 0)
-	    ;; If the text is to the left of the progress bar, we remove
-	    ;; space from the left of the line.
-	    ;; Remember to remove an extra cell for the gutter.
-	    (coords-adjust coords-list 0 (1+ text2-width) 0 (- (1+ text2-width)))))))))
-
-(define (render-bar TPB coords-list)
+(define (do-bar TPB coords-list)
   "Given a TUI-PROGRESS-BAR and a coords list, this
 renders the bar portion of the progress bar.  It returns
 a coords-list of the remaining portion of the window."
-  (let ((start-y (coords-get-start-y coords-list))
-	(start-x (coords-get-start-x coords-list))
-	(height (coords-get-height coords-list))
-	(width (coords-get-width coords-list))
-	(fraction (%tui-progress-bar-get-fraction TPB))
+  (let ((fraction (%tui-progress-bar-get-fraction TPB))
 	(fg-color (%tui-progress-bar-get-bar-fg-color TPB))
 	(bg-color (%tui-progress-bar-get-bar-bg-color TPB))
 	(panel (%tui-progress-bar-get-panel TPB)))
-    (cond
-     ((or (zero? height) (zero? width))
-      ;; There is no room to draw anything
-      coords-list)
-     (else
-      ;; Convert the fraction into progress bar 1/8ths
-      (let* ((eighths (inexact->exact (round (* 8 fraction width))))
-	     (full-blocks (quotient eighths 8))
-	     (last-block (remainder eighths 8))
-	     (text (string-append (make-string full-blocks (string-ref *fraction-blocks* 8)))))
-	;; Add the fraction block
-	(unless (zero? last-block)
-		(set! text (string-append text (string (string-ref *fraction-blocks* last-block)))))
-	;; And the right hand side of the bar
-	(set! text (string-append text (make-string (- width (string-length text)) #\space)))
-	(attr-set! panel A_NORMAL
-		   (color-indices-get-color-pair-index fg-color bg-color))
-	(addstr panel text #:y start-y #:x start-x)
-	(coords-adjust coords-list 1 0 -1 0))))))
+    (render-bar panel fraction #:coords-list coords-list
+		#:fg-color fg-color
+		#:bg-color bg-color)))
 
 (define (render TPB)
-  (render-bar TPB
-	      (render-text TPB
-			   (render-padding TPB
-					   (render-border TPB
-							  (render-background TPB
-									     (compute-coords-list TPB)))))))
+  (do-bar TPB
+	  (do-text TPB
+		   (do-padding TPB
+			       (do-border TPB
+					  (do-background TPB
+							 (compute-coords-list TPB)))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -295,6 +224,37 @@ a coords-list of the remaining portion of the window."
 			       (bar-fg-color COLOR_INDEX_WHITE)
 			       (bar-bg-color COLOR_INDEX_GREY37)
 			       )
+  "Creates a new ncurses panel of the given START-X START-Y WIDTH HEIGHT.
+Returns a new <tui-progress-bar> that contains the panel plus many
+properties that describe a progress bar.
+
+The TEXT-LOCATION is 'left or 'top, for text inline and to the left of the
+bar, or above the bar.
+
+The BORDER-TYPE is 'border-none, 'border-light, 'border-rounded,
+'border-heavy, 'border-double, or 'border-block.  The default
+'border-none draws no border.  If a border is drawn, the region in the
+panel available for content is reduced by two rows and two columns.
+
+The FRACTION is the fill percentage of the progress bar, from 0.0 to 1.0.
+
+The HORIZONTAL-PADDING is the number of rows between the border and
+the content, a nonnegative integer. Each row of padding reduces the
+height availabe for content by two rows.
+
+The VERTICAL-PADDING is the number of columns between the border and
+the content, a nonnegative integer.  Each column of padding reduces
+the width available for content by two columns.
+
+The TEXT is a simple Guile string containing the text for the label.
+
+The TEXT-ATTRIBUTES are ncurses attributes constants, like A_NORMAL or
+A_BOLD.  One can logically OR multiple constants to combine
+attributes.
+
+TEXT-COLOR BORDER-COLOR BG-COLOR BAR-FG-COLOR and BAR-BG-COLOR are xterm
+color indices from 0 to 255.
+"
   (let* ((pan (newwin width height start-y start-x #:panel #t))
 	 (TPB  (%tui-progress-bar-new pan
 				      border-type
@@ -313,9 +273,28 @@ a coords-list of the remaining portion of the window."
     TPB))
 
 (define (tui-progress-bar-set-fraction! TPB fraction)
+  "Sets the FRACTION property of a <tui-progress-bar>, which is the
+fill fraction of the progress bar, from 0.0 to 1.0."
   (%tui-progress-bar-set-fraction! TPB fraction)
   (render TPB))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; DERIVED FROM WINDOW
+
+(define (tui-progress-bar-resize TPB height width)
+  "Resizes the ncurses panel of a <tui-progress-bar> and then
+re-renders its contents."
+  (resize (%tui-progress-bar-get-panel TPB) height width))
+
+(define (tui-progress-bar-getbegyx TPB)
+  "Gets the START-Y and START-X of a <tui-progress-bar>. Note that
+if there is a border or padding, the top-left corner of the area
+available for content may differ."
+  (getbegyx (%tui-progress-bar-get-panel TPB)))
+
 (define (tui-progress-bar-getmaxyx TPB)
+  "Gets the height and width of a <tui-progress-bar>.  Note that
+if there is a border or padding, the height and width available for content
+will be reduced."
   (let ((pan (%tui-progress-bar-get-panel TPB)))
     (getmaxyx pan)))

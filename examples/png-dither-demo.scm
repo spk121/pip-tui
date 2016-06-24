@@ -14,7 +14,7 @@
 ;; (write (array-ref img 0 0))
 ;; (newline)
 ;; (write img)
-(define pgr (image->pseudographics img (iota 16) #f))
+;; (define pgr (image->pseudographics img (iota 16) #f))
 ;; (write pgr)
 ;; (newline)
 
