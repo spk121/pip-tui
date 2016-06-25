@@ -50,3 +50,27 @@ og skrider fra Texten til Talen.")
 
 3 יהודה היה אביהם של פרץ וזרח (אמם הייתה תמר); פרץ היה אביו של חצרון; חצרון היה אביו של רם;
 ")
+
+(define ceefax-text-1
+  (string-append
+   "BBC journalist's Savile warning\n"
+   "The Newsnight producer behind the "
+   "dropped Jimmy Savile investigation "
+   "warned his editor that the BBC was at "
+   "risk of being accused of a cover-up.\n"
+   "\n"
+   "Meirion Jones told the Panorama "
+   "programme looking into the Savile "
+   "scandal that he emailed Newsnight "
+   "editor Peter Rippon on 7 December 2011.\n"
+   "\n"
+   "\"I was sure the story would come out "
+   "one way or another and... the BBC would "
+   "be accused of a cover-up,\" he said.\n"
+   "\n"
+   "The BBC says it would not comment while "
+   "an investigation took place.\n"
+   "\n"
+   "   [Home news digest 141]\n"
+   "   [World digest 142]\n"
+   "[How Ceefax switches to Digital TV 697]\n"))

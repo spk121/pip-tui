@@ -14,6 +14,7 @@
 	    substring-width
 	    string-trim-right-to-width
 	    substring-list
+	    string-list-length
 	    string-find-brace-pairs
 	    string-list-find-brace-pairs
 	    string-list-truncate!)
@@ -361,9 +362,13 @@ opening and closing braces. It does not handle nesting of braces."
       ;; Multiple-line substring
       (let ([sublist (list-head (list-tail str-list line-start) (1+ (- line-end line-start)))])
 	(string-list-truncate-entry! sublist 0 pos-start)
-	(string-list-truncate-entry! sublist (1- (length str-list)) 0 pos-end)
+	(string-list-truncate-entry! sublist (1- (length sublist)) 0 pos-end)
 	sublist)))
 
+(define (string-list-length strlist)
+  "Returns the number of characters in a string list."
+  (apply + (map string-length strlist)))
+  
 (define (string-list-find-brace-pairs str-list left-brace right-brace)
   "Given a list of strings STR-LIST and two characters LEFT-BRACE and RIGHT-BRACE,
 this returns the a list of pairs of string indices of matching opening

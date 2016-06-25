@@ -23,6 +23,7 @@
   #:use-module (srfi srfi-9)
   #:use-module (ncurses curses)
   #:use-module (pip-tui typecheck)
+  #:use-module (pip-tui pip-color-names)
   #:use-module (pip-tui coords)
   #:use-module (pip-tui string-lib)
   #:use-module (pip-tui data-lib)
@@ -30,7 +31,10 @@
   #:use-module (pip-tui render-lib)
   #:export (extract-hotspots-from-string-list
 	    tui-terminal-new
-	    tui-terminal-tick))
+	    tui-terminal-tick
+	    TERMINAL_MICROSECONDS_PER_TICK
+	    tui-terminal-process-event
+	    %set-hotspot-cur!))
 
 (define-record-type <hotspot>
   (hotspot-new start-y			; line #
@@ -71,6 +75,23 @@ START-LINE START-INDEX END-LINE END-INDEX, this creates a new
 	  [x2 (substring-width (list-ref str-list y2) 0 (1+ i2))])
       (hotspot-new y1 x1 i1 y2 x2 i2 (append (substring-list str-list y1 i1 y2 i2)) #f #f))))
 
+(define (in-hotspot? hotspot y x)
+  "Checks to see if the position y,x is clickable location in a
+hotspot."
+  (let ((start-x (hotspot-get-start-x hotspot))
+	(start-y (hotspot-get-start-y hotspot))
+	(end-x (hotspot-get-end-x hotspot))
+	(end-y (hotspot-get-end-y hotspot)))
+    (or (and (= y start-y)
+	     (= y end-y)
+	     (>= x start-x)
+	     (<= x end-x))
+	(and (not (= start-y end-y))
+	     (>= y start-y)
+	     (<= y end-y)
+	     (or (and (= y start-y) (>= x start-x))
+		 (and (= y end-y) (<= x end-x))
+		 (and (not (= y start-y)) (not (= y end-y))))))))
 
 (define (extract-hotspots-from-string-list strlist)
   (map
@@ -84,6 +105,7 @@ START-LINE START-INDEX END-LINE END-INDEX, this creates a new
   (%tui-terminal-new panel
 		     text
 		     rendered-text
+		     rendered-text-length
 		     hotspots
 		     state
 		     draw-start-time
@@ -94,13 +116,19 @@ START-LINE START-INDEX END-LINE END-INDEX, this creates a new
   (panel %panel %set-panel!)
   (text %text %set-text!)
   (rendered-text %rendered-text %set-rendered-text!)
+  (rendered-text-length %rendered-text-length %set-rendered-text-length!)
   (hotspots %hotspots %set-hotspots!)
-  (state %tui-terminal-get-state %tui-terminal-set-state!)
+  (state %state %set-state!)
   (draw-start-time %draw-start-time %set-draw-start-time!)
   (draw-last-update-time %draw-last-update-time %set-draw-last-update-time!)
   (hotspot-cur %hotspot-cur %set-hotspot-cur!))
 
-
+;; (define TERMINAL_CHARACTERS_PER_SECOND 30) ; ~300 baud
+(define TERMINAL_CHARACTERS_PER_SECOND 120) ; ~1200 baud
+;; (define TERMINAL_CHARACTERS_PER_SECOND 960) ; ~9600 baud
+;; (define TERMINALS_CHARACTER_PER_SECOND 1440) ; ~14.4 kbps
+;; (define TERMINALS_CHARACTER_PER_SECOND 5600) ; ~56 kbps
+(define TERMINAL_MICROSECONDS_PER_TICK (quotient 1000000 TERMINAL_CHARACTERS_PER_SECOND))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-syntax assert-tui-terminal
@@ -117,7 +145,7 @@ text."
 			       (coords-get-width (window-relative-coords (%panel TT)))
 			       'left
 			       #f)])
-    ;; (when (not (string-list=? render (rendered-text TT)))
+    (%set-rendered-text-length! TT (string-list-length render))
     (%set-rendered-text! TT render)
     (%set-hotspots! TT (extract-hotspots-from-string-list (%rendered-text TT)))
     ))
@@ -132,7 +160,8 @@ STATE is either 'drawing or 'control."
 	 (TT (%tui-terminal-new pan	;panel
 				text	; text
 				#f	; rendered text
-				#f	; hotspots
+				#f	; rendered text length
+				'()	; hotspots
 				state
 				draw-start-time
 				#f	; draw last update time
@@ -159,10 +188,30 @@ STATE is either 'drawing or 'control."
 (define (do-text TT coords-list)
   (let ([panel (%panel TT)]
 	[text (%text TT)]
-	[n (inexact->exact (round (* 10 (- (now) (%draw-start-time TT)))))])
-    (render-text panel text #:coords-list coords-list
-		 #:line-wrap #t
-		 #:max-codepoints n)))
+	[n (inexact->exact (round (* TERMINAL_CHARACTERS_PER_SECOND
+				     (- (now) (%draw-start-time TT)))))])
+    (when (> n (%rendered-text-length TT))
+      (%set-state! TT 'control))
+    (if (eq? (%state TT) 'drawing)
+	(render-text panel text #:coords-list coords-list
+		     #:line-wrap #t
+		     #:fg-color COLOR_INDEX_GREEN
+		     #:bg-color COLOR_INDEX_BLACK
+		     #:max-codepoints n)
+	;; else if state is control
+	(begin 
+	  (render-text panel text #:coords-list coords-list
+		       #:fg-color COLOR_INDEX_GREEN
+		       #:bg-color COLOR_INDEX_BLACK
+		       #:line-wrap #t)
+	  (if (%hotspot-cur TT)
+	      (let* ([highlight (list-ref (%hotspots TT) (%hotspot-cur TT))])
+		(render-highlight panel
+				  (hotspot-get-start-y highlight)
+				  (hotspot-get-start-x highlight)
+				  (hotspot-get-end-y highlight)
+				  (hotspot-get-end-x highlight)
+				  #:coords-list coords-list)))))))
 
 (define (render TT)
   (do-text TT
@@ -173,8 +222,40 @@ STATE is either 'drawing or 'control."
 
 (define (tui-terminal-tick TT)
   (render TT))
-  
 
+(define (check-for-hotspot TT y x)
+  (list-index
+   (lambda (hs)
+     (in-hotspot? hs y x))
+   (%hotspots TT)))
+	
+
+(define (tui-terminal-process-event TT c m)
+  ;; In 'drawing mode, a left-mouse click
+  ;; over the window causes drawing to complete
+  (cond
+   ((and (eq? 'drawing (%state TT))
+	 (eqv? c KEY_MOUSE)
+	 (wenclose? (%panel TT) (third m) (second m))
+	 (or (eq? BUTTON1_PRESSED (fifth m))
+	     (eq? BUTTON1_CLICKED (fifth m)))
+	 )
+    (%set-state! TT 'control)
+    (render TT))
+   ((and (eq? 'control (%state TT))
+	 (eqv? c KEY_MOUSE)
+	 (or (eq? BUTTON1_PRESSED (fifth m))
+	     (eq? BUTTON1_CLICKED (fifth m))))
+    (let ((pos (mouse-trafo (%panel TT) (third m) (second m) #f)))
+      (addstr (stdscr) (format #f "~s ~s ~s     " (third m) (second m) pos) #:y 1 #:x 0)
+      (refresh (stdscr))
+      (when pos
+        (let ((spot (check-for-hotspot TT (car pos) (cadr pos))))
+	  (when spot
+	    (%set-hotspot-cur! TT spot)
+	    (render TT))))))))
+    
+    
 
 ;; (define (tui-terminal-reset-drawing-mode TT)
 ;;   "Set the internal state of a tui-terminal to the initial conditions

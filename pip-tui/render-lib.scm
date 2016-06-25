@@ -338,11 +338,12 @@ by coords-list."
 			   (hotspot-attr RENDER_DEFAULT_HOTSPOT_ATTR)
 			   (hotspot-fg-color RENDER_DEFAULT_HOTSPOT_FG_COLOR)
 			   (hotspot-bg-color RENDER_DEFAULT_HOTSPOT_BG_COLOR))
-  "Applies the given highlight to a region in the panel.  The highlighted region
-is text-like in its extent: starting as (x0,y0) and proceeding right,
-wrapping to the next line if necessary.  X0, Y1, X1 and Y1 are relative to
-the origin in COORDS-LIST, if provided.  If any of ATTR, FG-COLOR, or BG-COLOR
-are not false,  they are applied to hotspot region."
+  "Applies the given highlight to a region in the panel.  The
+highlighted region is text-like in its extent: starting as (x0,y0) and
+proceeding right, wrapping to the next line if necessary.  X0, Y1, X1
+and Y1 are relative to the origin in COORDS-LIST, if provided.  If any
+of ATTR, FG-COLOR, or BG-COLOR are not false, they are applied to
+hotspot region."
   (let ([height (coords-get-height coords-list)]
 	[width (coords-get-width coords-list)]
 	[start-y (coords-get-start-y coords-list)]
