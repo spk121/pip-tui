@@ -111,6 +111,7 @@ hotspot."
 		     draw-start-time
 		     draw-last-update-time
 		     hotspot-cur
+		     hotspot-wide
 		     )
   tui-terminal?
   (panel %panel %set-panel!)
@@ -121,10 +122,12 @@ hotspot."
   (state %state %set-state!)
   (draw-start-time %draw-start-time %set-draw-start-time!)
   (draw-last-update-time %draw-last-update-time %set-draw-last-update-time!)
-  (hotspot-cur %hotspot-cur %set-hotspot-cur!))
+  (hotspot-cur %hotspot-cur %set-hotspot-cur!)
+  (hotspot-wide %hotspot-wide %set-hotspot-wide!))
 
 ;; (define TERMINAL_CHARACTERS_PER_SECOND 30) ; ~300 baud
-(define TERMINAL_CHARACTERS_PER_SECOND 120) ; ~1200 baud
+(define TERMINAL_CHARACTERS_PER_SECOND 74) ; Fallout-4 like
+;; (define TERMINAL_CHARACTERS_PER_SECOND 120) ; ~1200 baud
 ;; (define TERMINAL_CHARACTERS_PER_SECOND 960) ; ~9600 baud
 ;; (define TERMINALS_CHARACTER_PER_SECOND 1440) ; ~14.4 kbps
 ;; (define TERMINALS_CHARACTER_PER_SECOND 5600) ; ~56 kbps
@@ -135,6 +138,10 @@ hotspot."
   (syntax-rules ()
     ((_ val)
      (typecheck val 'tui-terminal tui-terminal?))))
+
+(define (hotspot-count TT)
+  (assert-tui-terminal TT)
+  (length (%hotspots TT)))
 
 (define (render-text! TT)
   "Update the RENDERED-TEXT parameter in the <tui-terminal> from its
@@ -165,7 +172,9 @@ STATE is either 'drawing or 'control."
 				state
 				draw-start-time
 				#f	; draw last update time
-				#f)))	; current hotspot index
+				#f	; current hotspot index
+				#f	; are hotspots "wide"? e.g. do they take a whole line
+				)))
     (unless draw-start-time
       (%set-draw-start-time! TT (now)))
     (render-text! TT)
@@ -177,7 +186,9 @@ STATE is either 'drawing or 'control."
 
 (define (do-background TT coords-list)
     (render-background (%panel TT)
-		       #:coords-list coords-list))
+		       #:coords-list coords-list
+		       #:bg-color COLOR_INDEX_BLACK
+		       #:fg-color COLOR_INDEX_GREEN))
 
 (define (do-border TT coords-list)
   coords-list)
@@ -211,7 +222,11 @@ STATE is either 'drawing or 'control."
 				  (hotspot-get-start-x highlight)
 				  (hotspot-get-end-y highlight)
 				  (hotspot-get-end-x highlight)
-				  #:coords-list coords-list)))))))
+				  #:coords-list coords-list
+				  #:hotspot-attr A_NORMAL
+				  #:hotspot-fg-color COLOR_INDEX_BLACK
+				  #:hotspot-bg-color COLOR_INDEX_GREEN
+				  #:full-width #t)))))))
 
 (define (render TT)
   (do-text TT
@@ -231,18 +246,55 @@ STATE is either 'drawing or 'control."
 	
 
 (define (tui-terminal-process-event TT c m)
-  ;; In 'drawing mode, a left-mouse click
-  ;; over the window causes drawing to complete
+  ;; In 'drawing mode, BUTTON1_PRESSED or KEY_ENTER over the window
+  ;; causes drawing to complete.
   (cond
-   ((and (eq? 'drawing (%state TT))
+   [(and (eq? 'drawing (%state TT))
 	 (eqv? c KEY_MOUSE)
 	 (wenclose? (%panel TT) (third m) (second m))
 	 (or (eq? BUTTON1_PRESSED (fifth m))
 	     (eq? BUTTON1_CLICKED (fifth m)))
 	 )
     (%set-state! TT 'control)
-    (render TT))
-   ((and (eq? 'control (%state TT))
+    (%set-hotspot-cur! TT 0)
+    (render TT)
+    ;; Return TRUE to indicate that we've processed this event, but,
+    ;; aren't complete.
+    #t]
+
+   ;; In control mode, if we're acting like the blog-like entries in
+   ;; Fallout 4...  A hotspot sits in its own line.  The whole line is
+   ;; inverse if it is selected.
+   
+   ;; The 1st hotspot is initialially selected.
+   
+   ;; KEY_UP, KEY_DOWN move between entries (no wrap
+   ;; around). 
+   [(and (eq? 'control (%state TT))
+	 (eqv? c KEY_UP))
+    (%set-hotspot-cur! TT (max 0 (1- (%hotspot-cur TT))))
+    (render TT)
+    ;; Return TRUE to indicate that we've processed the event, but,
+    ;; aren't complete.
+    #t]
+
+   [(and (eq? 'control (%state TT))
+	 (eqv? c KEY_DOWN))
+    (%set-hotspot-cur! TT (min (1- (hotspot-count TT)) (1+ (%hotspot-cur TT))))
+    (render TT)
+    ;; Return TRUE to indicate that we've processed the event, but,
+    ;; aren't complete.
+    #t]
+
+   ;; KEY_ENTER selects the current entry.
+   [(and (eq? 'control (%state TT))
+	 (or (eqv? c KEY_ENTER)
+	     (eqv? c #\newline)))
+    (render TT)
+    ;; Success, return the selection
+    (%hotspot-cur TT)]
+
+   [(and (eq? 'control (%state TT))
 	 (eqv? c KEY_MOUSE)
 	 (or (eq? BUTTON1_PRESSED (fifth m))
 	     (eq? BUTTON1_CLICKED (fifth m))))
@@ -253,7 +305,13 @@ STATE is either 'drawing or 'control."
         (let ((spot (check-for-hotspot TT (car pos) (cadr pos))))
 	  (when spot
 	    (%set-hotspot-cur! TT spot)
-	    (render TT))))))))
+	    (render TT)
+	    ;; Success, return the selection.
+	    spot))))]
+   
+   ;; everything else is ignored.
+   (else #f)))
+	    
     
     
 

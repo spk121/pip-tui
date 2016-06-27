@@ -7,8 +7,6 @@
 
 (include "sample-text.scm")
 
-;; (write (string-list-find-brace-pairs (list ceefax-text-1) #\[ #\]))
-
 (setlocale LC_ALL "")
 (define mainwin (initscr))
 (start-color!)
@@ -25,6 +23,7 @@
 (curs-set 0)
 (update-panels)
 (doupdate)
+(define ret #f)
 (while #t
   (let* ((c (getch mainwin))
 	 (m (if (eqv? c KEY_MOUSE) (getmouse) #f)))
@@ -33,13 +32,17 @@
 	  (move mainwin 0 0)
 	  (addstr mainwin (format #f "~s ~s" (keyname c) m))
 	  (refresh mainwin)
-	  (tui-terminal-process-event label3 c m))
+	  (set! ret (tui-terminal-process-event label3 c m))
+	  (if (number? ret) (break)))
 	;; else
 	(usleep TERMINAL_MICROSECONDS_PER_TICK))
     (tui-terminal-tick label3)
     (update-panels)
     (doupdate)))
 
-
 (endwin)
+(display "user chose #")
+(display ret)
+(newline)
+
 

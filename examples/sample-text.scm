@@ -71,6 +71,6 @@ og skrider fra Texten til Talen.")
    "The BBC says it would not comment while "
    "an investigation took place.\n"
    "\n"
-   "   [Home news digest 141]\n"
-   "   [World digest 142]\n"
+   "[Home news digest 141]\n"
+   "[World digest 142]\n"
    "[How Ceefax switches to Digital TV 697]\n"))

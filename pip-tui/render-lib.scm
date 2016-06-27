@@ -337,7 +337,8 @@ by coords-list."
 			   #:key coords-list 
 			   (hotspot-attr RENDER_DEFAULT_HOTSPOT_ATTR)
 			   (hotspot-fg-color RENDER_DEFAULT_HOTSPOT_FG_COLOR)
-			   (hotspot-bg-color RENDER_DEFAULT_HOTSPOT_BG_COLOR))
+			   (hotspot-bg-color RENDER_DEFAULT_HOTSPOT_BG_COLOR)
+			   (full-width #f))
   "Applies the given highlight to a region in the panel.  The
 highlighted region is text-like in its extent: starting as (x0,y0) and
 proceeding right, wrapping to the next line if necessary.  X0, Y1, X1
@@ -371,7 +372,7 @@ hotspot region."
     (do ((j y0 (1+ j))) ((> j y1))
       (highlight
        j
-       (if (= j y0) x0 start-x)
-       (if (= j y1) x1 (+ start-x width))))))
+       (if (and (not full-width) (= j y0)) x0 start-x)
+       (if (and (not full-width) (= j y1)) x1 (+ start-x width))))))
 
   
