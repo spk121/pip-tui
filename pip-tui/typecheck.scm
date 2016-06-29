@@ -3,7 +3,9 @@
   #:export (typecheck
 	    assert-bytevector
 	    assert-exact-integer
-	    assert-string))
+	    assert-string
+	    assert-symbol
+	    ))
 
 ;; Typecheck macros
 (define-syntax typecheck
@@ -29,3 +31,8 @@
   (syntax-rules ()
     ((_ val)
      (typecheck val 'string string?))))
+
+(define-syntax assert-symbol
+  (syntax-rules ()
+    ((_ val)
+     (typecheck val 'symbol symbol?))))

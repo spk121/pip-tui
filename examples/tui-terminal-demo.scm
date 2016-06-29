@@ -1,9 +1,12 @@
-(use-modules (pip-tui tui-terminal)
-	     (pip-tui pip-color-names)
-	     (pip-tui pip-colors)
-	     (pip-tui string-lib)
-	     (ncurses curses)
-	     (ncurses panel))
+(use-modules
+ (ncurses curses)
+ (ncurses panel)
+ (pip-tui pip-color-names)
+ (pip-tui pip-colors)
+ (pip-tui string-lib)
+ (pip-tui tui-terminal)
+ (pip-tui tui-action)
+ )
 
 (include "sample-text.scm")
 
@@ -17,32 +20,52 @@
 (mousemask (logior ALL_MOUSE_EVENTS REPORT_MOUSE_POSITION))
 
 
+;; Make a terminal widget
+(define (finalize term)
+  (enqueue-symbolic-action 'main-loop-detach term)
+  ;; (tui-terminal-hide term)
+  (enqueue-symbolic-action 'main-loop-break term))
 
-(define label3 (tui-terminal-new 15 40 40 40 ceefax-text-1))
-(%set-hotspot-cur! label3 1)
-(curs-set 0)
-(update-panels)
-(doupdate)
-(define ret #f)
-(while #t
-  (let* ((c (getch mainwin))
-	 (m (if (eqv? c KEY_MOUSE) (getmouse) #f)))
-    (if c
-	(begin
-	  (move mainwin 0 0)
-	  (addstr mainwin (format #f "~s ~s" (keyname c) m))
-	  (refresh mainwin)
-	  (set! ret (tui-terminal-process-event label3 c m))
-	  (if (number? ret) (break)))
-	;; else
-	(usleep TERMINAL_MICROSECONDS_PER_TICK))
-    (tui-terminal-tick label3)
-    (update-panels)
-    (doupdate)))
+(define TT (tui-terminal-new 4 1 25 45 ceefax-text-1
+			     #:completion-cb finalize))
+
+
+;; Make an action map
+(define amap (action-map-new '()))
+(add-action-entry amap
+		  (action-entry-new
+		   (action-new "tui-terminal-mouse" #t #f tui-terminal-mouse-action-activate #f)
+ 		   TT default-mouse-event-handler))
+(add-action-entry amap
+		  (action-entry-new
+		   (action-new "tui-terminal-kbd" #t #f tui-terminal-kbd-action-activate #f)
+		   TT default-kbd-event-handler))
+(add-action-entry amap
+		  (action-entry-new
+		   (action-new "tui-terminal-tick" #t #f tui-terminal-tick-action-activate #f)
+		   TT default-tick-event-handler))
+
+(main-loop amap)
 
 (endwin)
-(display "user chose #")
-(display ret)
+(newline)
+(newline)
+(newline)
+(newline)
+(newline)
+(newline)
+(newline)
+(newline)
+(newline)
+(newline)
+(newline)
+(newline)
+(newline)
+(newline)
+(newline)
+(newline)
+(format #t "+++++++++++++++++++++++++++++++++++++++++++++++~%")
+(format #t "USER CHOSE ~S~%" (tui-terminal-hotspot-cur TT))
 (newline)
 
 

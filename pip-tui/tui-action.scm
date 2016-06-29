@@ -3,10 +3,21 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (ncurses curses)
+  #:use-module (ncurses panel)
   #:use-module (pip-tui typecheck)
   #:use-module (pip-tui pip-color-names)
   #:use-module (pip-tui time)
-  #:export ())
+  #:export (event-get-data
+	    action-new
+	    action-map-new
+	    add-action-entry
+	    action-entry-new
+	    default-mouse-event-handler
+	    default-kbd-event-handler
+	    default-tick-event-handler
+	    main-loop
+	    enqueue-symbolic-action
+	    ))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -53,11 +64,17 @@
 ;; change-state-cb (lambda (state)) -- function that is called
 ;; when state changes.
 
+(define-syntax assert-action
+  (syntax-rules ()
+    ((_ val)
+     (typecheck val 'action action?))))
+
+
 (define (action-activate action target event)
   "In response to EVENT, apply the action's activate callback function
 to the TARGET."
   (assert-action action)
-  (assert-event event)
+  ;;(assert-event event)
   (when (action-get-enabled action)
     (let ((func (action-get-activate-cb action))
 	  (state (action-get-state action)))
@@ -102,8 +119,19 @@ to the TARGET."
   (type event-get-type event-set-type!)
   (data event-get-data event-set-data!))
 
+(define-syntax assert-event
+  (syntax-rules ()
+    ((_ val)
+     (typecheck val 'event event?))))
+
+(define-syntax assert-mevent
+  (syntax-rules ()
+    ((_ val)
+     (typecheck val 'mevent mevent?))))
+
 (define (kbd-event-new x)
-  (assert-number x)
+  ;;(assert-exact-integer x)
+  ;; FIXME assert integer or char
   (event-new 'kbd x))
 
 (define (kbd-event? x)
@@ -119,7 +147,7 @@ to the TARGET."
   (eq? (event-get-type x) 'mouse))
 
 (define (signal-event-new x)
-  (assert-signal-id x)
+  ;; (assert-signal-id x)
   (event-new 'signal x))
 
 (define (signal-event? x)
@@ -134,7 +162,7 @@ to the TARGET."
   (eq? (event-get-type x) 'resize))
 
 (define (symbolic-event-new x)
-  (assert-symbol x)
+  ;; (assert-symbol x)
   (event-new 'symbolic x))
 
 (define (symbolic-event? x)
@@ -205,15 +233,20 @@ to the TARGET."
 (define-record-type <action-entry>
   (action-entry-new action
 		    target
-		    event-handler))
+		    event-handler)
 		  
   action-entry?
   (action get-action set-action!)
   (target get-target set-target!)
   (event-handler get-event-handler set-event-handler!))
 
+(define-syntax assert-action-entry
+  (syntax-rules ()
+    ((_ val)
+     (typecheck val 'action-entry action-entry?))))
+
 (define (action-entry-name=? entry name)
-  (string=? name (get-name (get-action entry))))
+  (string=? name (action-get-name (get-action entry))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ACTION MAP
@@ -230,6 +263,11 @@ to the TARGET."
   action-map?
   (entries get-entries set-entries!))
 
+(define-syntax assert-action-map
+  (syntax-rules ()
+    ((_ val)
+     (typecheck val 'action-map action-map?))))
+
 (define (lookup-action-entry-by-name amap name)
   (assert-action-map amap)
   (assert-string name)
@@ -245,64 +283,98 @@ to the TARGET."
 			  (not (action-entry-name=? entry name)))
 			(get-entries amap))))
 
+(define (action-entry-get-target AE)
+  (assert-action-entry AE)
+  (get-target AE))
+
+(define (remove-action-entry-by-target amap target)
+  (assert-action-map amap)
+  (set-entries! amap
+	(filter (lambda (entry)
+		  (not (eq? target (action-entry-get-target entry))))
+		(get-entries amap))))
+
 (define (add-action-entry amap entry)
   (assert-action-map amap)
   (assert-action-entry entry)
-  (remove-action amap (get-name (get-action entry)))
+  (remove-action-entry-by-name amap (action-get-name (get-action entry)))
   (set-entries! amap
-		(append (get-entries amap)
-			(list entry))))
+		(append! (get-entries amap)
+			 (list entry))))
 
 (define (activate-action-entry-by-name amap name event)
   (assert-action-map amap)
   (assert-string name)
   (assert-event event)
-  (let ((AE (lookup-action-entry amap name)))
+  (let ((AE (lookup-action-entry-by-name amap name)))
     (when AE (action-activate (get-action AE) (get-target AE) event))))
 
 (define (change-action-entry-state-by-name amap name state)
   (assert-action-map amap)
   (assert-string name)
-  (let ((AE (lookup-action-entry amap name)))
-    (when AE (action-change-state! (get-action AE) (get-target AE) state))))
-
+  (let ((AE (lookup-action-entry-by-name amap name)))
+    (when AE (action-change-state! (get-action AE) state))))
 
 (define (enable-action-entry-by-name amap name)
   (assert-action-map amap)
   (assert-string name)
-  (let ((AE (lookup-action-entry amap name)))
-    (when AE (action-enable! (get-action AE) (get-target AE)))))
+  (let ((AE (lookup-action-entry-by-name amap name)))
+    (when AE (action-enable! (get-action AE)))))
 
 (define (disable-action-entry-by-name amap name)
   (assert-action-map amap)
   (assert-string name)
-  (let ((AE (lookup-action-entry amap name)))
-    (when AE (action-disable! (get-action AE) (get-target AE)))))
+  (let ((AE (lookup-action-entry-by-name amap name)))
+    (when AE (action-disable! (get-action AE)))))
+
+;; (define (process-event amap event)
+;;   "Send EVENT to the event handlers in the ACTION MAP to
+;; see if any of the actions wants to process the event."
+;;   (assert-action-map amap)
+;;   (assert-event event)
+;;   (let ((entries (get-entries amap)))
+;;     (unless (null-list? entries)
+
+;;       (let loop ((entry (car entries))
+;; 		 (rest (cdr entries)))
+;; 	(addstr (stdscr) (format #f "~s ~s  " (action-get-name (get-action entry)) event) #:y 1 #:x 0)
+;; 	(refresh (stdscr))
+	
+;; 	;; Send the event through the event handler to see if it is actionable.
+;; 	;; If the handler says that this is an actionable event, then
+;; 	;; send it to the action.
+	
+;; 	(let ((actionable ((get-event-handler entry) event)))
+;; 	  (if actionable
+;; 	      (let ((result (action-activate (get-action entry) (get-target entry) actionable)))
+;; 		(if (not (null-list? rest))
+;; 		    ;; When the result is false, this action has not
+;; 		    ;; consumed the event, so we continue passing it
+;; 		    ;; to the other possible actions.
+;; 		    (loop (car rest) (cdr rest))
+;; 		    ;; When the result is true, this action has
+;; 		    ;; consumed the event, and there is no need to
+;; 		    ;; continue passing it to the other actions.
+;; 		    result))))))))
 
 (define (process-event amap event)
   "Send EVENT to the event handlers in the ACTION MAP to
 see if any of the actions wants to process the event."
   (assert-action-map amap)
   (assert-event event)
-  (let ((entries (get-entries amap)))
-    (unless (null-list? entries)
+  (do ((i 0 (1+ i))) ((>= i (length (get-entries amap))))
 
-      (let loop ((entry (car entries))
-		 (rest (cdr entries)))
-	;; Send the event through the event handler to see if it is actionable.
-	;; If the handler says that this is an actionable event, then
-	;; send it to the action.
+    (let ([entry (list-ref (get-entries amap) i)])
+      (addstr (stdscr)
+	      (format #f "~s ~s  "
+		      (action-get-name (get-action entry)) event) #:y 1 #:x 0)
+      (refresh (stdscr))
 	
-	(let ((actionable ((get-handler entry) event)))
+	(let ((actionable ((get-event-handler entry) event)))
 	  (if actionable
-	      (let ((result (activate (get-action event) (get-target-event) actionable)))
-		(if (not result)
-		    ;; When the result is false, this action has not consumed the event,
-		    ;; so we continue passing it to the other possible actions.
-		    (loop (car rest) (cdr rest))
-		    ;; When the result is true, this action has consumed the event,
-		    ;; and there is no need to continue passing it to the other actions.
-		    result))))))))
+	      (action-activate (get-action entry)
+			       (get-target entry)
+			       actionable))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -314,15 +386,15 @@ see if any of the actions wants to process the event."
 ;; will be sent out at intervals governed by TICKS_PER_SECOND.  The
 ;; TUI will be repainted at intervals governed by FRAMES_PER_SECOND.
 
-(define TICKS_PER_SECOND 60)
-(define FRAMES_PER_SECOND 60)
+(define TICKS_PER_SECOND 30)
+(define FRAMES_PER_SECOND 30)
 
 (define *symbolic-actions* '())
 
-(define (enqueue-symbolic-action sym)
+(define (enqueue-symbolic-action sym data)
   (assert-symbol sym)
   (set! *symbolic-actions*
-    (append! *symbolic-actions* (list sym))))
+    (append! *symbolic-actions* (list (cons sym data)))))
 
 (define (dequeue-symbolic-action)
   (if (null-list? *symbolic-actions*)
@@ -337,7 +409,7 @@ see if any of the actions wants to process the event."
 Loop continuously until the break signal is received or until some add
 a 'main-loop-break signal to the queue."
   (let ([running #t]
-	[verbose #f]
+	[verbose #t]
 	[last-update-time (now)]
 	[last-draw-time (now)]
 	[tick-duration (/ 1.0 TICKS_PER_SECOND)])
@@ -353,35 +425,39 @@ a 'main-loop-break signal to the queue."
 	(when (not evt)
 	  (let ((c (getch (stdscr))))
 	    (cond
-	     [(= c KEY_RESIZE)
+	     [(equal? c KEY_RESIZE)
 	      (set! evt (resize-event-new '()))]
-	     [(= c KEY_MOUSE)
+	     [(equal? c KEY_MOUSE)
 	      (set! evt (mouse-event-new (getmouse)))]
-	     [(number? c)
+	     [(or (char? c) (number? c))
 	      (set! evt (kbd-event-new c))])))
 	(unless evt
 	  (set! evt (tick-event-new time-cur)))
+	;  (set! evt (kbd-event-new KEY_ENTER)))
 
 	(when verbose
 	  (move (stdscr) 0 0)
-	  (addstr (stdscr) (format #f "~s:~s     " time-cur evt))
+	  (addstr (stdscr) (format #f "~s: ~s     " time-cur evt))
 	  (refresh (stdscr))
 	  )
 	
 	(cond
 	 ;; Certain symbolic actions are process by the main loop
-	 [(and (symbolic-event? evt) (eq? 'main-loop-break (event-data evt)))
+	 [(and (symbolic-event? evt) (eq? 'main-loop-break (car (event-get-data evt))))
 	  (set! running #f)]
-	 [(and (symbolic-event? evt) (eq? 'main-loop-verbose (event-data evt)))
+	 [(and (symbolic-event? evt) (eq? 'main-loop-verbose (car (event-get-data evt))))
 	  (set! verbose #t)]
-	 [(and (symbolic-event? evt) (eq? 'main-loop-quiet (event-data evt)))
+	 [(and (symbolic-event? evt) (eq? 'main-loop-quiet (car (event-get-data evt))))
 	  (set! verbose #f)]
-	 [(and (symbolic-event? evt) (eq? 'main-loop-slow (event-data evt)))
+	 [(and (symbolic-event? evt) (eq? 'main-loop-slow (car (event-get-data evt))))
 	  (set! tick-duration 1.0)]
-	 [(and (symbolic-event? evt) (eq? 'main-loop-default (event-data evt)))
+	 [(and (symbolic-event? evt) (eq? 'main-loop-default (car (event-get-data evt))))
 	  (set! tick-duration (/ 1.0 TICKS_PER_SECOND))]
-	 [(and (symbolic-event? evt) (eq? 'main-loop-fast (event-data evt)))
+	 [(and (symbolic-event? evt) (eq? 'main-loop-fast (car (event-get-data evt))))
 	  (set! tick-duration 0.0)]
+	 
+	 [(and (symbolic-event? evt) (eq? 'main-loop-detach (car (event-get-data evt))))
+	  (remove-action-entry-by-target amap (cdr (event-get-data evt)))]
 
 	 [else
 	  (process-event amap evt)])
@@ -391,7 +467,7 @@ a 'main-loop-break signal to the queue."
 	  (doupdate)
 	  (set! last-draw-time time-cur))
 
-	(when (tick-event? evt)
+	(when #t ;; (tick-event? evt)
 	  (usleep (inexact->exact (round (* 1000000.0 tick-duration))))
 	  (set! last-update-time time-cur))))))
 

@@ -117,7 +117,8 @@ SCM_SOURCES = \
  tui-progress-bar.scm \
  typecheck.scm \
  unistring.scm \
- tui-terminal.scm
+ tui-terminal.scm \
+ tui-action.scm
 SCM_OBJECTS = $(patsubst %.scm,%.go,$(SCM_SOURCES))
 
 all: $(SCM_OBJECTS) piptui.so
