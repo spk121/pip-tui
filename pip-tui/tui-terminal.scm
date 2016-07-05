@@ -235,7 +235,7 @@ STATE is either 'drawing or 'control."
 		       #:fg-color COLOR_INDEX_RED
 		       #:bg-color COLOR_INDEX_BLACK
 		       #:line-wrap #t)
-	  (if (%hotspot-cur TT)
+	  (if (and (%hotspot-cur TT) (not (null-list? (%hotspots TT))))
 	      (let* ([highlight (list-ref (%hotspots TT) (%hotspot-cur TT))])
 		(render-highlight panel
 				  (hotspot-get-start-y highlight)
