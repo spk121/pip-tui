@@ -31,33 +31,36 @@
   #:use-module (pip-tui render-lib)
   #:use-module (pip-tui tui-action)
   #:use-module (pip-tui hotspot)
+  #:use-module (pip-tui event)
+  #:use-module (pip-tui action)
+  #:use-module (pip-tui tui-action)
   #:export (tui-terminal-new
-	    tui-terminal-tick
-	    TERMINAL_MICROSECONDS_PER_TICK
-	    ;; tui-terminal-process-event
-	    %set-hotspot-cur!
-	    tui-terminal-get-completion-cb
-	    tui-terminal-set-completion-cb!
-	    tui-terminal-kbd-action-activate
-	    tui-terminal-mouse-action-activate
-	    tui-terminal-tick-action-activate
-	    tui-terminal-hotspot-cur
-	    ))
+            tui-terminal-tick
+            TERMINAL_MICROSECONDS_PER_TICK
+            ;; tui-terminal-process-event
+            %set-hotspot-cur!
+            tui-terminal-get-completion-cb
+            tui-terminal-set-completion-cb!
+            tui-terminal-kbd-action-activate
+            tui-terminal-mouse-action-activate
+            tui-terminal-tick-action-activate
+            tui-terminal-hotspot-cur
+            ))
 
 
 (define-record-type <tui-terminal>
   (%tui-terminal-new panel
-		     text
-		     rendered-text
-		     rendered-text-length
-		     hotspots
-		     state
-		     draw-start-time
-		     draw-last-update-time
-		     hotspot-cur
-		     hotspot-wide
-		     completion-cb
-		     )
+                     text
+                     rendered-text
+                     rendered-text-length
+                     hotspots
+                     state
+                     draw-start-time
+                     draw-last-update-time
+                     hotspot-cur
+                     hotspot-wide
+                     completion-cb
+                     )
   tui-terminal?
   (panel %panel %set-panel!)
   (text %text %set-text!)
@@ -72,8 +75,9 @@
   (completion-cb %completion-cb %set-completion-cb!)
   )
 
+(define TERMINAL_CHARACTERS_PER_SECOND 1)
 ;; (define TERMINAL_CHARACTERS_PER_SECOND 30) ; ~300 baud
-(define TERMINAL_CHARACTERS_PER_SECOND 74) ; Fallout-4 like
+;; (define TERMINAL_CHARACTERS_PER_SECOND 74) ; Fallout-4 like
 ;; (define TERMINAL_CHARACTERS_PER_SECOND 120) ; ~1200 baud
 ;; (define TERMINAL_CHARACTERS_PER_SECOND 960) ; ~9600 baud
 ;; (define TERMINALS_CHARACTER_PER_SECOND 1440) ; ~14.4 kbps
@@ -95,36 +99,36 @@
 text."
   (assert-tui-terminal TT)
   (let ([render (string-render (->string (%text TT))
-			       4 ;tabsize
-			       (coords-get-width (window-relative-coords (%panel TT)))
-			       'left
-			       #f)])
+                               4 ;tabsize
+                               (coords-get-width (window-relative-coords (%panel TT)))
+                               'left
+                               #f)])
     (%set-rendered-text-length! TT (string-list-length render))
     (%set-rendered-text! TT render)
     (%set-hotspots! TT (hotspots-from-string-list (%rendered-text TT)))
     ))
 
 (define* (tui-terminal-new y x width height text
-			   #:key draw-start-time (state 'drawing)
-			   (completion-cb #f))
+                           #:key draw-start-time (state 'drawing)
+                           (completion-cb #f))
   "Creates a new terminal using TEXT, which is either a Guile string
 or a Guile procedure that takes no arguments that, when called,
 produces a string.  The DRAW-START-TIME is when the text of the
 terminal will outputting, one character at a time, to the screen.  The
 STATE is either 'drawing or 'control."
   (let* ((pan (newwin width height y x #:panel #t))
-	 (TT (%tui-terminal-new pan	;panel
-				text	; text
-				#f	; rendered text
-				#f	; rendered text length
-				'()	; hotspots
-				state
-				draw-start-time
-				#f	; draw last update time
-				0	; current hotspot index
-				#f	; are hotspots "wide"? e.g. do they take a whole line
-				completion-cb ; a func to call when a selection is made
-				)))
+         (TT (%tui-terminal-new pan     ;panel
+                                text    ; text
+                                #f      ; rendered text
+                                #f      ; rendered text length
+                                '()     ; hotspots
+                                state
+                                draw-start-time
+                                #f      ; draw last update time
+                                0       ; current hotspot index
+                                #f      ; are hotspots "wide"? e.g. do they take a whole line
+                                completion-cb ; a func to call when a selection is made
+                                )))
     (unless draw-start-time
       (%set-draw-start-time! TT (now)))
     (render-text! TT)
@@ -142,57 +146,80 @@ STATE is either 'drawing or 'control."
 
 (define (do-background TT coords-list)
     (render-background (%panel TT)
-		       #:coords-list coords-list
-		       #:bg-color COLOR_INDEX_BLACK
-		       #:fg-color COLOR_INDEX_GREEN))
+                       #:coords-list coords-list
+                       #:bg-color COLOR_INDEX_BLACK
+                       #:fg-color COLOR_INDEX_GREEN))
 
 (define (do-border TT coords-list)
   coords-list)
-  
+
 (define (do-padding TT coords-list)
   coords-list)
 
 (define (do-text TT coords-list)
   (let ([panel (%panel TT)]
-	[text (%text TT)]
-	[n (inexact->exact (round (* TERMINAL_CHARACTERS_PER_SECOND
-				     (- (now) (%draw-start-time TT)))))])
+        [text (%text TT)]
+        [n (inexact->exact (round (* TERMINAL_CHARACTERS_PER_SECOND
+                                     (- (now) (%draw-start-time TT)))))])
     (when (> n (%rendered-text-length TT))
       (%set-state! TT 'control))
     (if (eq? (%state TT) 'drawing)
-	(render-text panel text #:coords-list coords-list
-		     #:line-wrap #t
-		     #:fg-color COLOR_INDEX_GREEN
-		     #:bg-color COLOR_INDEX_BLACK
-		     #:max-codepoints n)
-	;; else if state is control
-	(begin 
-	  (render-text panel text #:coords-list coords-list
-		       #:fg-color COLOR_INDEX_RED
-		       #:bg-color COLOR_INDEX_BLACK
-		       #:line-wrap #t)
-	  (if (and (%hotspot-cur TT) (not (null-list? (%hotspots TT))))
-	      (let* ([highlight (list-ref (%hotspots TT) (%hotspot-cur TT))])
-		(render-highlight panel
-				  (hotspot-get-start-y highlight)
-				  (hotspot-get-start-x highlight)
-				  (hotspot-get-end-y highlight)
-				  (hotspot-get-end-x highlight)
-				  #:coords-list coords-list
-				  #:hotspot-attr A_NORMAL
-				  #:hotspot-fg-color COLOR_INDEX_BLACK
-				  #:hotspot-bg-color COLOR_INDEX_GREEN
-				  #:full-width #t)))))))
+        (render-text panel text #:coords-list coords-list
+                     #:line-wrap #t
+                     #:fg-color COLOR_INDEX_GREEN
+                     #:bg-color COLOR_INDEX_BLACK
+                     #:max-codepoints n)
+        ;; else if state is control
+        (begin
+          (render-text panel text #:coords-list coords-list
+                       #:fg-color COLOR_INDEX_RED
+                       #:bg-color COLOR_INDEX_BLACK
+                       #:line-wrap #t)
+          (if (and (%hotspot-cur TT) (not (null-list? (%hotspots TT))))
+              (let* ([highlight (list-ref (%hotspots TT) (%hotspot-cur TT))])
+                (render-highlight panel
+                                  (hotspot-get-start-y highlight)
+                                  (hotspot-get-start-x highlight)
+                                  (hotspot-get-end-y highlight)
+                                  (hotspot-get-end-x highlight)
+                                  #:coords-list coords-list
+                                  #:hotspot-attr A_NORMAL
+                                  #:hotspot-fg-color COLOR_INDEX_BLACK
+                                  #:hotspot-bg-color COLOR_INDEX_GREEN
+                                  #:full-width #t)))))))
 
 (define (render TT)
   (do-text TT
-	   (do-padding TT
-		       (do-border TT
-				  (do-background TT
-						 (compute-coords-list TT))))))
+           (do-padding TT
+                       (do-border TT
+                                  (do-background TT
+                                                 (compute-coords-list TT))))))
 
 (define (tui-terminal-tick TT)
-  (render TT))
+  (if (not (%draw-last-update-time TT))
+      (%set-draw-last-update-time! TT (now)))
+  (let ([prev-n (inexact->exact (round (* TERMINAL_CHARACTERS_PER_SECOND
+					  (- (%draw-last-update-time TT)
+					     (%draw-start-time TT)))))]
+        [n (inexact->exact (round (* TERMINAL_CHARACTERS_PER_SECOND
+                                     (- (now) (%draw-start-time TT)))))])
+    (if (and (eq? (%state TT) 'drawing) (> n (%rendered-text-length TT)))
+	(begin
+	  ;; This tick is going to convert from drawing to control
+	  ;; mode, so now is when to play the "end-of-drawing" sounds.
+	  (enqueue-symbolic-action 'sound-terminal-drawing-end '())
+	  (render TT)
+	  (%set-draw-last-update-time! TT (now)))
+	
+	;; else
+	(if (and (eq? (%state TT) 'drawing) (> n prev-n))
+	    (begin
+	      ;; This tick is going to draw a new character, so now is
+	      ;; when to play a "new-character" sound
+	      (enqueue-symbolic-action 'sound-terminal-glyph-new ' ())
+	      (render TT)
+	      (%set-draw-last-update-time! TT (now)))))))
+	      
 
 (define (check-for-hotspot TT y x)
   (list-index
@@ -200,101 +227,101 @@ STATE is either 'drawing or 'control."
      (in-hotspot? hs y x))
    (%hotspots TT)))
 
-
-
 (define tui-terminal-kbd-action-activate
-  (lambda (TT event)
-    (let ((c (event-get-data event)))
-      (cond
-       
-       ;; In 'drawing mode, KEY_ENTER or newline causes drawing to
-       ;; complete.
-       [(and (eq? 'drawing (%state TT))
-	     (or (eqv? c KEY_ENTER)
-		 (eqv? c #\newline)))
-	(%set-state! TT 'control)
-	(%set-hotspot-cur! TT 0)
-	(render TT)
+  (lambda (TT event state)
+    (when (kbd-event? event)
+      (let ((c (event-get-data event)))
+	(cond
+	 ;; In 'drawing mode, KEY_ENTER or newline causes drawing to
+	 ;; complete.
+	 [(and (eq? 'drawing (%state TT))
+	       (or (eqv? c KEY_ENTER)
+		   (eqv? c #\newline)))
+	  (%set-state! TT 'control)
+	  (%set-hotspot-cur! TT 0)
+	  (render TT)
 
-	;; Return TRUE to indicate that we've process this event.
-	#t]
-       
-       ;; In control mode, if we're acting like the blog-like entries in
-       ;; Fallout 4...  A hotspot sits in its own line.  The whole line is
-       ;; inverse if it is selected.
-   
-       ;; The 1st hotspot is initialially selected.
-   
-       ;; KEY_UP, KEY_DOWN move between entries (no wrap around).
-       [(and (eq? 'control (%state TT))
-	     (eqv? c KEY_UP))
-	(%set-hotspot-cur! TT (max 0 (1- (%hotspot-cur TT))))
-	(render TT)
-	;; Return TRUE to indicate that we've processed the event, but,
-	;; aren't complete.
-	#t]
+	  ;; Return TRUE to indicate that we've process this event.
+	  #t]
 
-       [(and (eq? 'control (%state TT))
-	     (eqv? c KEY_DOWN))
-	(%set-hotspot-cur! TT (min (1- (hotspot-count TT)) (1+ (%hotspot-cur TT))))
-	(render TT)
-	;; Return TRUE to indicate that we've processed the event, but,
-	;; aren't complete.
-	#t]
+	 ;; In control mode, if we're acting like the blog-like entries in
+	 ;; Fallout 4...  A hotspot sits in its own line.  The whole line is
+	 ;; inverse if it is selected.
 
-       ;; KEY_ENTER selects the current entry.
-       [(and (eq? 'control (%state TT))
-	     (or (eqv? c KEY_ENTER)
-		 (eqv? c #\newline)))
-	(render TT)
+	 ;; The 1st hotspot is initialially selected.
 
-	;; Notify listeners that a selection has been made
-	(when (procedure? (%completion-cb TT))
-	  ((%completion-cb TT) TT))
+	 ;; KEY_UP, KEY_DOWN move between entries (no wrap around).
+	 [(and (eq? 'control (%state TT))
+	       (eqv? c KEY_UP))
+	  (%set-hotspot-cur! TT (max 0 (1- (%hotspot-cur TT))))
+	  (render TT)
+	  ;; Return TRUE to indicate that we've processed the event, but,
+	  ;; aren't complete.
+	  #t]
 
-	;; Success, return the selection
-	#t]
+	 [(and (eq? 'control (%state TT))
+	       (eqv? c KEY_DOWN))
+	  (%set-hotspot-cur! TT (min (1- (hotspot-count TT)) (1+ (%hotspot-cur TT))))
+	  (render TT)
+	  ;; Return TRUE to indicate that we've processed the event, but,
+	  ;; aren't complete.
+	  #t]
 
-       [else #f]))))
+	 ;; KEY_ENTER selects the current entry.
+	 [(and (eq? 'control (%state TT))
+	       (or (eqv? c KEY_ENTER)
+		   (eqv? c #\newline)))
+	  (render TT)
+
+	  ;; Notify listeners that a selection has been made
+	  (when (procedure? (%completion-cb TT))
+	    ((%completion-cb TT) TT))
+
+	  ;; Success, return the selection
+	  #t]
+	 
+	 [else #f])))))
 
 (define tui-terminal-mouse-action-activate
-  (lambda (TT event)
-    (let ([m (event-get-data event)])
-      (cond
-       [(and (eq? 'drawing (%state TT))
-	     (wenclose? (%panel TT) (third m) (second m))
-	     (or (eq? BUTTON1_PRESSED (fifth m))
-		 (eq? BUTTON1_CLICKED (fifth m)))
-	     )
-	(%set-state! TT 'control)
-	(%set-hotspot-cur! TT 0)
-	(render TT)
-	;; Return TRUE to indicate that we've used up this event.
-	#t]
+  (lambda (TT event state)
+    (when (mouse-event? event)
+      (let ([m (event-get-data event)])
+	(cond
+	 [(and (eq? 'drawing (%state TT))
+	       (wenclose? (%panel TT) (third m) (second m))
+	       (or (eq? BUTTON1_PRESSED (fifth m))
+		   (eq? BUTTON1_CLICKED (fifth m)))
+	       )
+	  (%set-state! TT 'control)
+	  (%set-hotspot-cur! TT 0)
+	  (render TT)
+	  ;; Return TRUE to indicate that we've used up this event.
+	  #t]
 
-       [(and (eq? 'control (%state TT))
-	     (or (eq? BUTTON1_PRESSED (fifth m))
-		 (eq? BUTTON1_CLICKED (fifth m))))
-	(let ([pos (mouse-trafo (%panel TT) (third m) (second m) #f)])
-	  (when pos
-	    (let ([spot (check-for-hotspot TT (car pos) (cadr pos))])
-	      (when spot
-		(%set-hotspot-cur! TT spot)
-		(render TT)
-		
-		;; Notify listeners that a selection has been made
-		(when (procedure? (%completion-cb TT))
-		  ((%completion-cb TT) TT))
-		
-		;; Return #t to indicate we've used up this event.
-		#t))))]
+	 [(and (eq? 'control (%state TT))
+	       (or (eq? BUTTON1_PRESSED (fifth m))
+		   (eq? BUTTON1_CLICKED (fifth m))))
+	  (let ([pos (mouse-trafo (%panel TT) (third m) (second m) #f)])
+	    (when pos
+	      (let ([spot (check-for-hotspot TT (car pos) (cadr pos))])
+		(when spot
+		  (%set-hotspot-cur! TT spot)
+		  (render TT)
 
-       [else #f]))))
-	      
+		  ;; Notify listeners that a selection has been made
+		  (when (procedure? (%completion-cb TT))
+		    ((%completion-cb TT) TT))
+
+		  ;; Return #t to indicate we've used up this event.
+		  #t))))]
+
+	 [else #f])))))
+
 (define tui-terminal-tick-action-activate
-  (lambda (TT event)
-    (let ([m (event-get-data event)])
-      (tui-terminal-tick TT))))
+  (lambda (TT event state)
+    (when (tick-event? event)
+      (let ([m (event-get-data event)])
+	(tui-terminal-tick TT)))))
 
 (define (tui-terminal-hotspot-cur TT)
   (assert-tui-terminal TT)
@@ -332,17 +359,17 @@ STATE is either 'drawing or 'control."
 ;;   (if (not (eqv? state (%tui-terminal-get-state)))
 ;;       ;; We've changed state, so re-render everything
 ;;       (begin
-;; 	[(eqv? state 'drawing)
-;; 	 (tui-terminal-reset-drawing-mode TT)]
-;; 	[(eqv? state 'select)
-;; 	 (tui-terminal-reset-select-mode TT)]
-;; 	(tui-terminal-render-full TT))
+;;      [(eqv? state 'drawing)
+;;       (tui-terminal-reset-drawing-mode TT)]
+;;      [(eqv? state 'select)
+;;       (tui-terminal-reset-select-mode TT)]
+;;      (tui-terminal-render-full TT))
 ;;       ;; else we're in the same state
 ;;       (begin
-;; 	[(eqv? state 'drawing)
-;; 	 (tui-terminal-reset-drawing-mode-delta TT now)]
-;; 	[(eqv? state 'select)
-;; 	 (tui-terminal-reset-select-mode-delta TT hotspot-cur)])))
+;;      [(eqv? state 'drawing)
+;;       (tui-terminal-reset-drawing-mode-delta TT now)]
+;;      [(eqv? state 'select)
+;;       (tui-terminal-reset-select-mode-delta TT hotspot-cur)])))
 
 ;; (define (render-tui-terminal-drawing-delta TT new)
 ;;   "This renders and new characters that need to be painted
@@ -359,7 +386,7 @@ STATE is either 'drawing or 'control."
 ;;   (unless (eqv? hotspot-cur (%tui-terminal-get-hotspot-cur TT))
 ;;     ;; If there is an old hotspot, et the attributes for the old
 ;;     ;; hotspot to A_NORMAL
-    
+
 ;;     ;; If there is a new hotspot, set the attributes for the new
 ;;     ;; hotspot to A_INVERSE, and tick.
 ;;     #t)
@@ -370,19 +397,19 @@ STATE is either 'drawing or 'control."
 ;; draw all the characters that should have been draw by time NOW.
 ;; If in select mode, draw all text and higlight the current
 ;; hotspot, if any."
-    
+
 ;;   #t)
 
 
 ;; (define (tui-terminal-controller TT c m)
 ;;   "Process keypress C.  If C is KEY_MOUSE, process
 ;; mouse event M."
-  
+
 ;;   ;; If the current state is the drawing state...
-  
+
 ;;   ;; A BUTTON1_PRESSED or a KEY_ENTER quits the drawing state and
 ;;   ;; makes a click sound and puts the terminal in control state.
-  
+
 ;;   ;; If the current state is the control state...
 
 ;;   ;; If we get mouse position events, and we mouse over a hotspot,
@@ -394,7 +421,7 @@ STATE is either 'drawing or 'control."
 
 ;;   ;; If there is a button1 click on a hotspot, do a selection
 ;;   ;; callback, and make a "click" sound.
-  
+
 ;;   #t)
 
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -403,7 +430,7 @@ STATE is either 'drawing or 'control."
 ;;    (define-syntax append-val!
 ;;      (syntax-rules()
 ;;        ((append-val! lst entry)
-;; 	(set! lst (append lst (list entry))))))
+;;      (set! lst (append lst (list entry))))))
 
 
 ;;   ;; If we're in drawing mode, figure out how many milliseconds
@@ -411,7 +438,7 @@ STATE is either 'drawing or 'control."
 ;;   ;; cells (or characters? or codepoints?) that should have appeared.
 ;;   ;; Render the string.  Write that number of codepoints.
 ;;   ;; If that number of codepoints has gone up, make a "tick".
-  
+
 ;;   ;; If we're in select mode.
 ;;   ;; wrap the text
 ;;   ;; figure out if there is a highlighted hotspot

@@ -5,6 +5,9 @@
  (pip-tui pip-colors)
  (pip-tui string-lib)
  (pip-tui tui-terminal)
+ (pip-tui action)
+ (pip-tui action-map)
+ (pip-tui event)
  (pip-tui tui-action)
  )
 
@@ -32,18 +35,32 @@
 
 ;; Make an action map
 (define amap (action-map-new '()))
-(add-action-entry amap
-		  (action-entry-new
-		   (action-new "tui-terminal-mouse" #t #f tui-terminal-mouse-action-activate #f)
- 		   TT default-mouse-event-handler))
-(add-action-entry amap
-		  (action-entry-new
-		   (action-new "tui-terminal-kbd" #t #f tui-terminal-kbd-action-activate #f)
-		   TT default-kbd-event-handler))
-(add-action-entry amap
-		  (action-entry-new
-		   (action-new "tui-terminal-tick" #t #f tui-terminal-tick-action-activate #f)
-		   TT default-tick-event-handler))
+(action-map-add-action!
+ amap
+ (action-new "tui-terminal-mouse" #t '() tui-terminal-mouse-action-activate #t)
+ TT)
+
+(action-map-add-action!
+ amap
+ (action-new "tui-terminal-kbd" #t '() tui-terminal-kbd-action-activate #f)
+ TT)
+
+(action-map-add-action!
+ amap
+ (action-new "tui-terminal-tick" #t '() tui-terminal-tick-action-activate #f)
+ TT)
+
+(define (sound-action-activate TT event state)
+  (when (symbolic-event? event)
+      (let ((c (event-get-data event)))
+	(when (or (eqv? (car c) 'sound-terminal-glyph-new)
+		  (eqv? (car c) 'sound-terminal-drawing-end))
+	  (beep)))))
+
+(action-map-add-action!
+ amap
+ (action-new "sound-terminal-glyph-new" #t '() sound-action-activate #f)
+ TT)
 
 (main-loop amap)
 
