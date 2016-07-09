@@ -73,13 +73,15 @@ srcdir = .
 CPPFLAGS := -DPIC -I${srcdir}\
  $(shell pkg-config guile-$(GUILE_EFFECTIVE_VERSION) --cflags-only-I)\
  $(shell pkg-config fribidi --cflags-only-I) \
- $(shell pkg-config libpng --cflags-only-I)
+ $(shell pkg-config libpng --cflags-only-I) \
+ $(shell pkg-config libpulse --cflags-only-I)
 
 # C compiler
 CFLAGS := -g -O2 -fPIC\
  $(shell pkg-config guile-$(GUILE_EFFECTIVE_VERSION) --cflags-only-other)\
  $(shell pkg-config fribidi --cflags-only-other) \
- $(shell pkg-config libpng --cflags-only-other)
+ $(shell pkg-config libpng --cflags-only-other) \
+ $(shell pkg-config libpulse --cflags-only-other)
 
 # SCM compiler
 SCMFLAGS := -Wformat -Wunbound-variable -Warity-mismatch -L $(srcdir)
@@ -88,24 +90,29 @@ SCMFLAGS := -Wformat -Wunbound-variable -Warity-mismatch -L $(srcdir)
 LDFLAGS := -shared -fPIC\
  $(shell pkg-config guile-$(GUILE_EFFECTIVE_VERSION) --libs-only-L --libs-only-other)\
  $(shell pkg-config fribidi --libs-only-L --libs-only-other) \
- $(shell pkg-config libpng --libs-only-L --libs-only-other)
+ $(shell pkg-config libpng --libs-only-L --libs-only-other) \
+ $(shell pkg-config libpulse --libs-only-L --libs-only-other)
 
 LIBS :=\
  $(shell pkg-config guile-$(GUILE_EFFECTIVE_VERSION) --libs-only-l)\
  $(shell pkg-config fribidi --libs-only-l) \
  $(shell pkg-config libpng --libs-only-l) \
+ $(shell pkg-config libpulse --libs-only-l) \
  -lm
 
 ################################################################
 # SOURCES
 
-LIB_SOURCES = bidi.c pip_png.c colors.c
+LIB_SOURCES = bidi.c pip_png.c colors.c pulseaudio.c
 LIB_HEADERS = bidi.h pip_png.h colors.h visibility.h
 LIB_OBJECTS = $(patsubst %.c,%.o,$(LIB_SOURCES))
 
 SCM_SOURCES = \
+ action.scm \
+ action-map.scm \
  border.scm \
  data-lib.scm \
+ event.scm \
  fribidi.scm \
  pip-color-names.scm \
  pip-colors.scm \
@@ -118,7 +125,8 @@ SCM_SOURCES = \
  typecheck.scm \
  unistring.scm \
  tui-terminal.scm \
- tui-action.scm
+ tui-action.scm \
+ hotspot.scm
 SCM_OBJECTS = $(patsubst %.scm,%.go,$(SCM_SOURCES))
 
 all: $(SCM_OBJECTS) piptui.so
@@ -143,6 +151,8 @@ bidi.o: bidi.c bidi.h visibility.h
 png.o: png.c png.h visibility.h
 
 colors.o: colors.c colors.h
+
+action-map.go: action.go
 
 install: installdirs all
 	$(INSTALL_DATA) $(SCM_SOURCES) $(DESTDIR)$(pkgguilesitedir)
