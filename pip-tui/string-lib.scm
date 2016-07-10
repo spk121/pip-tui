@@ -17,7 +17,8 @@
 	    string-list-length
 	    string-find-brace-pairs
 	    string-list-find-brace-pairs
-	    string-list-truncate!)
+	    string-list-truncate!
+            string-list-remainder)
   #:re-export (string-width))
 
 (define-syntax append-val!
@@ -414,7 +415,39 @@ list may be modified in the process."
 	 [(= (1+ i) (length strlist))
 	  strlist]
 	 [else
-	  (loop (1+ i) (+ n len))])))]))
+	  (loop (1+ i) (+ n len))])))
+    strlist]))
+
+(define (string-list-remainder strlist N)
+  "Returns a list of strings after removing the first N codepoints.
+The original list is not modified in the process."
+  (let ((out '()))
+    (cond
+     [(null? strlist)
+      strlist]
+     [(= N 0)
+      strlist]
+     [else
+      (let loop ([i 0] [n 0])
+        (let* ([str (list-ref strlist i)]
+               [len (string-length str)])
+          (cond
+           [(>= N (+ n len))
+            (if (< i (1- (length strlist)))
+                (loop (1+ i) (+ n len))
+                out)]
+           [(and (>= N n) (< N (+ n len)))
+            (set! out (append out (list (substring str (- N n)))))
+            (if (< i (1- (length strlist)))
+                (loop (1+ i) (+ n len))
+                out)]
+           [else
+            (set! out (append out (list str)))
+            (if (< i (1- (length strlist)))
+                (loop (1+ i) (+ n len))
+                out)]
+           )))])))
+
 
 ;; (setlocale LC_ALL "")
 ;; (string-pad-beginning-to-width "hello" 40)
