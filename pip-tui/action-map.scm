@@ -186,13 +186,13 @@ pair in the action map AMAP will receive the event."
   (do ((i 0 (1+ i))) ((>= i (length (get-entries amap))))
 
     (let ([entry (list-ref (get-entries amap) i)])
-      (addstr (stdscr)
-	      (format #f "~s ~s  "
-		      (action-get-name (car entry)) (action-get-state (car entry))
-		      ;; (action-get-name (car entry)) (action-get-state (car entry))
-		      )
-	      #:y 1 #:x 0)
-      (refresh (stdscr))
+      ;; (addstr (stdscr)
+      ;;         (format #f "~s ~s  "
+      ;;   	      (action-get-name (car entry)) (action-get-state (car entry))
+      ;;   	      ;; (action-get-name (car entry)) (action-get-state (car entry))
+      ;;   	      )
+      ;;         #:y 1 #:x 0)
+      ;; (refresh (stdscr))
       
       (action-activate (car entry)	; action
 		       (cdr entry)	; target

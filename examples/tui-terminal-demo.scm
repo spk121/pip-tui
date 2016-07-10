@@ -1,4 +1,5 @@
 (use-modules
+ (rnrs bytevectors)
  (ncurses curses)
  (ncurses panel)
  (pip-tui pip-color-names)
@@ -9,6 +10,7 @@
  (pip-tui action-map)
  (pip-tui event)
  (pip-tui tui-action)
+ (pip-tui pulseaudio)
  )
 
 (include "sample-text.scm")
@@ -50,12 +52,26 @@
  (action-new "tui-terminal-tick" #t '() tui-terminal-tick-action-activate #f)
  TT)
 
+(define (audio-tick-action-activate TT event state)
+  (when (tick-event? event)
+        (%pa-iterate)))
+
+(action-map-add-action!
+ amap
+ (action-new "audio-tick" #t '() audio-tick-action-activate #f)
+ #f)
+
 (define (sound-action-activate TT event state)
   (when (symbolic-event? event)
       (let ((c (event-get-data event)))
 	(when (or (eqv? (car c) 'sound-terminal-glyph-new)
 		  (eqv? (car c) 'sound-terminal-drawing-end))
-	  (beep)))))
+              (bytevector-s16-set! %audio-buffer 0 8000 (native-endianness))
+              (bytevector-s16-set! %audio-buffer 1 -8000 (native-endianness))
+              (bytevector-s16-set! %audio-buffer 0 8000 (native-endianness))
+              (bytevector-s16-set! %audio-buffer 3 -8000 (native-endianness))
+              #f
+              ))))
 
 (action-map-add-action!
  amap

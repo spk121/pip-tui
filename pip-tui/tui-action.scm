@@ -24,8 +24,8 @@
 ;; will be sent out at intervals governed by TICKS_PER_SECOND.  The
 ;; TUI will be repainted at intervals governed by FRAMES_PER_SECOND.
 
-(define TICKS_PER_SECOND 30)
-(define FRAMES_PER_SECOND 30)
+(define TICKS_PER_SECOND 1000)
+(define FRAMES_PER_SECOND 60)
 
 (define *symbolic-actions* '())
 
@@ -47,7 +47,7 @@
 Loop continuously until the break signal is received or until some add
 a 'main-loop-break signal to the queue."
   (let ([running #t]
-	[verbose #t]
+	[verbose #f]
 	[last-update-time (now)]
 	[last-draw-time (now)]
 	[tick-duration (/ 1.0 TICKS_PER_SECOND)])
