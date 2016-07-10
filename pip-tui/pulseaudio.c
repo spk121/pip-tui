@@ -319,6 +319,12 @@ static void cb_audio_stream_write(pa_stream *p, size_t nbytes, void *userdata)
   if (scm_is_true (scm_procedure_p (pulse_stream_read_proc)))
     scm_call_1 (pulse_stream_read_proc, scm_from_uint (n));
   xpa_stream_write(p, SCM_BYTEVECTOR_CONTENTS(pulse_bv), nbytes);
+  memmove(SCM_BYTEVECTOR_CONTENTS(pulse_bv),
+          SCM_BYTEVECTOR_CONTENTS(pulse_bv) + nbytes,
+          AUDIO_BUFFER_SIZE - nbytes);
+  memset(SCM_BYTEVECTOR_CONTENTS(pulse_bv) + (AUDIO_BUFFER_SIZE - nbytes),
+         0,
+         nbytes);
   pulse.samples_written += n;
 }
 
@@ -449,7 +455,6 @@ pa_iterate (void)
   xpa_mainloop_blocking_iterate (pulse.loop);
   return SCM_UNSPECIFIED;
 }
-
 
 void
 pip_pulseaudio_init ()
