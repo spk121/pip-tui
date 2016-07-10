@@ -26,7 +26,7 @@ To build, the code requires or could someday require
 ### Widgets
 - [x] Label: (string) auto wrapping text in a box
 - [x] Progress Bar: (string/number) a short text and a progress bar
-- [ ] Terminal: (string) auto wrapping text that reveals itself one
+- [x] Terminal: (string) auto wrapping text that reveals itself one
       character at a time. Bracketed text are clickable links.
 - [ ] Menu Bar: (alist key string) a small menu, arranged horizontally
       in one line.
@@ -52,8 +52,9 @@ To build, the code requires or could someday require
 
 ## Thought of the Day
 
-Best to put shared rendering ops in their own library.
+Putting together a main loop with Pulseaudio support was more annoying
+than I thought, but, it is cool that I get to recycle some chiptune code.
+
+Guile's GStreamer support is rotten; how will I play Icecast streams?
 
 If I really want to do fallback rendering for Latin1, it would take some effort.
-
-Guile's GStreamer support is rotten; my Guile Pulseaudio support library won't help with playing Icecast streams.
