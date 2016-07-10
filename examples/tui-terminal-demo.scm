@@ -2,6 +2,7 @@
  (rnrs bytevectors)
  (ncurses curses)
  (ncurses panel)
+ (pip-tui time)
  (pip-tui pip-color-names)
  (pip-tui pip-colors)
  (pip-tui string-lib)
@@ -54,7 +55,7 @@
 
 (define (audio-tick-action-activate TT event state)
   (when (tick-event? event)
-        (%pa-iterate)))
+        (audio-iterate)))
 
 (action-map-add-action!
  amap
@@ -66,10 +67,11 @@
       (let ((c (event-get-data event)))
 	(when (or (eqv? (car c) 'sound-terminal-glyph-new)
 		  (eqv? (car c) 'sound-terminal-drawing-end))
-              (bytevector-s16-set! %audio-buffer 0 8000 (native-endianness))
-              (bytevector-s16-set! %audio-buffer 1 -8000 (native-endianness))
-              (bytevector-s16-set! %audio-buffer 0 8000 (native-endianness))
-              (bytevector-s16-set! %audio-buffer 3 -8000 (native-endianness))
+              (simple-tone 0 0 (list 0.001 0.01 (+ 5000 (random 1)) 0.5 0.4))
+              ;; (bytevector-s16-set! (vector-ref %audio-buffers 0) 0 8000 (native-endianness))
+              ;; (bytevector-s16-set! (vector-ref %audio-buffers 0) 1 -8000 (native-endianness))
+              ;; (bytevector-s16-set! (vector-ref %audio-buffers 0) 0 8000 (native-endianness))
+              ;; (bytevector-s16-set! (vector-ref %audio-buffers 0) 3 -8000 (native-endianness))
               #f
               ))))
 

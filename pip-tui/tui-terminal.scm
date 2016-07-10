@@ -56,7 +56,7 @@
                      hotspots
                      state
                      draw-start-time
-                     draw-last-update-time
+                     draw-last-update-count
                      hotspot-cur
                      hotspot-wide
                      completion-cb
@@ -69,13 +69,13 @@
   (hotspots %hotspots %set-hotspots!)
   (state %state %set-state!)
   (draw-start-time %draw-start-time %set-draw-start-time!)
-  (draw-last-update-time %draw-last-update-time %set-draw-last-update-time!)
+  (draw-last-update-count %draw-last-update-count %set-draw-last-update-count!)
   (hotspot-cur %hotspot-cur %set-hotspot-cur!)
   (hotspot-wide %hotspot-wide %set-hotspot-wide!)
   (completion-cb %completion-cb %set-completion-cb!)
   )
 
-;; (define TERMINAL_CHARACTERS_PER_SECOND 1)
+;; (define TERMINAL_CHARACTERS_PER_SECOND 2)
 ;; (define TERMINAL_CHARACTERS_PER_SECOND 30) ; ~300 baud
 (define TERMINAL_CHARACTERS_PER_SECOND 74) ; Fallout-4 like
 ;; (define TERMINAL_CHARACTERS_PER_SECOND 120) ; ~1200 baud
@@ -131,7 +131,7 @@ STATE is either 'drawing or 'control."
                                 )))
     (unless draw-start-time
             (%set-draw-start-time! TT (now)))
-    (%set-draw-last-update-time! TT (%draw-start-time TT))
+    (%set-draw-last-update-count! TT 0)
     (render-text! TT)
     (render TT)
     TT))
@@ -162,8 +162,7 @@ STATE is either 'drawing or 'control."
         [text (%text TT)]
         [n (inexact->exact (round (* TERMINAL_CHARACTERS_PER_SECOND
                                      (- (now) (%draw-start-time TT)))))]
-        [nprev (inexact->exact (round (* TERMINAL_CHARACTERS_PER_SECOND
-                                         (- (%draw-last-update-time TT) (%draw-start-time TT)))))]
+        [nprev (%draw-last-update-count TT)]
         )
     (when (and (eq? (%state TT) 'drawing) (> n (%rendered-text-length TT)))
           (%set-state! TT 'control)
@@ -186,7 +185,10 @@ STATE is either 'drawing or 'control."
                   (addch (stdscr) (bold (string-ref new-text (1- (string-length new-text)))))
                   (refresh (stdscr))
                   (if (char-set-contains? char-set:graphic (string-ref new-text (1- (string-length new-text))))
-                      (enqueue-symbolic-action 'sound-terminal-glyph-new '()))))
+                      (enqueue-symbolic-action 'sound-terminal-glyph-new '())))
+                ;; (enqueue-symbolic-action 'sound-terminal-glyph-new '())
+                (%set-draw-last-update-count! TT n)
+                )
         )
         
         ;; else if state is control
@@ -208,7 +210,7 @@ STATE is either 'drawing or 'control."
                                   #:hotspot-fg-color COLOR_INDEX_BLACK
                                   #:hotspot-bg-color COLOR_INDEX_GREEN
                                   #:full-width #t)))))
-    (%set-draw-last-update-time! TT (now))))
+    ))
 
 (define (render TT)
   (do-text TT
