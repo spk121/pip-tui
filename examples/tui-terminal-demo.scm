@@ -50,16 +50,16 @@
 
 (action-map-add-action!
  amap
- (action-new "tui-terminal-tick" #t '() tui-terminal-tick-action-activate #f)
+ (action-new "tui-terminal-idle" #t '() tui-terminal-idle-action-activate #f)
  TT)
 
-(define (audio-tick-action-activate TT event state)
-  (when (tick-event? event)
+(define (audio-idle-action-activate TT event state)
+  (when (idle-event? event)
         (audio-iterate)))
 
 (action-map-add-action!
  amap
- (action-new "audio-tick" #t '() audio-tick-action-activate #f)
+ (action-new "audio-idle" #t '() audio-idle-action-activate #f)
  #f)
 
 (define (sound-action-activate TT event state)

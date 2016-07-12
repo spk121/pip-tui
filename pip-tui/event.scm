@@ -1,13 +1,8 @@
 (define-module (pip-tui event)
-  ;; #:use-module (ice-9 optargs)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (ncurses curses)
-  ;; #:use-module (ncurses panel)
   #:use-module (pip-tui typecheck)
-  ;; #:use-module (pip-tui pip-color-names)
-  ;; #:use-module (pip-tui time)
-  ;; #:use-module (pip-tui action)
   #:export (event-get-data
 	    assert-event
 	    kbd-event-new
@@ -20,8 +15,8 @@
 	    resize-event?
 	    symbolic-event-new
 	    symbolic-event?
-	    tick-event-new
-	    tick-event?))
+	    idle-event-new
+	    idle-event?))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; EVENT
@@ -31,10 +26,10 @@
 ;; The event types are
 ;; 1. keyboard events
 ;; 2. mouse events
-;; 3. POSIX signals
-;; 4. terminal resize events, SIGWINCH
+;; 3. POSIX signals (unimplemented)
+;; 4. terminal resize events, SIGWINCH (unimplemented)
 ;; 5. symbolic -- a scheme symbol pushed onto the main loop
-;; 6. tick -- a timestamp event fired automatically when idle
+;; 6. idle -- a timestamp event fired automatically when idle
 ;; These are fired by the main loop
 
 (define-record-type <event>
@@ -55,7 +50,6 @@
      (typecheck val 'mevent mevent?))))
 
 (define (kbd-event-new key-or-char)
-  ;;(assert-exact-integer x)
   ;; FIXME assert integer or char
   (event-new 'kbd key-or-char))
 
@@ -72,7 +66,6 @@
   (eq? (event-get-type x) 'mouse))
 
 (define (signal-event-new posix-signal-id)
-  ;; (assert-signal-id x)
   (event-new 'signal posix-signal-id))
 
 (define (signal-event? x)
@@ -87,17 +80,16 @@
   (eq? (event-get-type x) 'resize))
 
 (define (symbolic-event-new sym data)
-  ;; (assert-symbol x)
   (event-new 'symbolic (cons sym data)))
 
 (define (symbolic-event? x)
   (assert-event x)
   (eq? (event-get-type x) 'symbolic))
 
-(define (tick-event-new time-cur delta-time)
-  (event-new 'tick (cons time-cur delta-time)))
+(define (idle-event-new time-cur delta-time)
+  (event-new 'idle (cons time-cur delta-time)))
 
-(define (tick-event? x)
+(define (idle-event? x)
   (assert-event x)
-  (eq? (event-get-type x) 'tick))
+  (eq? (event-get-type x) 'idle))
 	

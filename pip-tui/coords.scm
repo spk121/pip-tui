@@ -17,6 +17,17 @@
 	    window-absolute-coords
 	    coords-zero-area?))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; COORDS
+
+;; A struct that describes the size of a region on the screen.
+;; start-y (integer): the line # of the top row of the region
+;; start-x (integer): the column # of the left column of the region
+;; height (integer): the number of rows in the region
+;; width (integer): the number of columns in the region
+
+;; 
+
 (define-record-type <coords>
   (coords-new start-y
 	      start-x
@@ -35,22 +46,24 @@
 	  (coords-get-height C)
 	  (coords-get-width C)))
 
-(define (coords-adjust A delta-start-y delta-start-x delta-height delta-width)
+(define (coords-adjust C delta-start-y delta-start-x delta-height delta-width)
+  "Returns a new <coords>, which is like <coords> C adjusted by 
+DELTA-START-Y, DELTA-START-X, DELTA-HEIGHT, DELTA-WIDTH"
   (coords-new
-   (+ (coords-get-start-y A) delta-start-y)
-   (+ (coords-get-start-x A) delta-start-x)
-   (+ (coords-get-height A) delta-height)
-   (+ (coords-get-width A) delta-width)))
+   (+ (coords-get-start-y C) delta-start-y)
+   (+ (coords-get-start-x C) delta-start-x)
+   (+ (coords-get-height C) delta-height)
+   (+ (coords-get-width C) delta-width)))
 
 (define (window-relative-coords win)
-  "Given an ncurses window, this returns a COORDS struct with
-the 0,0 as the top-left corner and dimensions of the panel."
+  "Given an ncurses panel window WIN, this returns a COORDS struct
+with the 0,0 as the top-left corner and dimensions of the panel."
   (let ((yx (getmaxyx win)))
     (coords-new 0 0 (first yx) (second yx))))
 
 (define (window-absolute-coords win)
-  "Given an ncurses window, this returns a COORDS struct with
-the 0,0 as the top-left corner and dimensions of the panel."
+  "Given an ncurses window WIN, this returns a COORDS struct with the
+top-left corner and the dimensions of the panel."
   (let ((maxyx (getmaxyx win))
 	(begyx (getbegyx win)))
     (coords-new (first begyx) (second begyx) (first maxyx) (second maxyx))))

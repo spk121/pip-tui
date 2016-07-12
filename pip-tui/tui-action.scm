@@ -20,11 +20,11 @@
 
 ;; The main event loop gets events such as keypresses and mouse events
 ;; and passes them to the action map.  "Symbolic actions" can be
-;; placed on the queue.  If no events are ready, "tick" or idle events
-;; will be sent out at intervals governed by TICKS_PER_SECOND.  The
+;; placed on the queue.  If no events are ready, "idle" or idle events
+;; will be sent out at intervals governed by IDLES_PER_SECOND.  The
 ;; TUI will be repainted at intervals governed by FRAMES_PER_SECOND.
 
-(define TICKS_PER_SECOND 1000)
+(define IDLES_PER_SECOND 1000)
 (define FRAMES_PER_SECOND 60)
 
 (define *symbolic-actions* '())
@@ -50,11 +50,11 @@ a 'main-loop-break signal to the queue."
 	[verbose #f]
 	[last-update-time (now)]
 	[last-draw-time (now)]
-	[tick-duration (/ 1.0 TICKS_PER_SECOND)])
+	[idle-duration (/ 1.0 IDLES_PER_SECOND)])
     (while running
       ;; First, check the symbolic actions.  If there are no symbolic
       ;; actions in the queue, check for keypresses and mouse events.
-      ;; Failing that, do an idle (tick) event.
+      ;; Failing that, do an idle (idle) event.
       (let ([evt #f]
 	    [sym (dequeue-symbolic-action)]
 	    [time-cur (now)])
@@ -70,7 +70,7 @@ a 'main-loop-break signal to the queue."
 	     [(or (char? c) (number? c))
 	      (set! evt (kbd-event-new c))])))
 	(unless evt
-	  (set! evt (tick-event-new time-cur (- time-cur last-update-time))))
+	  (set! evt (idle-event-new time-cur (- time-cur last-update-time))))
 	;  (set! evt (kbd-event-new KEY_ENTER)))
 
 	(when verbose
@@ -88,11 +88,11 @@ a 'main-loop-break signal to the queue."
 	 [(and (symbolic-event? evt) (eq? 'main-loop-quiet (car (event-get-data evt))))
 	  (set! verbose #f)]
 	 [(and (symbolic-event? evt) (eq? 'main-loop-slow (car (event-get-data evt))))
-	  (set! tick-duration 1.0)]
+	  (set! idle-duration 1.0)]
 	 [(and (symbolic-event? evt) (eq? 'main-loop-default (car (event-get-data evt))))
-	  (set! tick-duration (/ 1.0 TICKS_PER_SECOND))]
+	  (set! idle-duration (/ 1.0 IDLES_PER_SECOND))]
 	 [(and (symbolic-event? evt) (eq? 'main-loop-fast (car (event-get-data evt))))
-	  (set! tick-duration 0.0)]
+	  (set! idle-duration 0.0)]
 	 
 	 [(and (symbolic-event? evt) (eq? 'main-loop-detach (car (event-get-data evt))))
 	  (action-map-remove-action-entries-by-target! amap (cdr (event-get-data evt)))]
@@ -105,8 +105,8 @@ a 'main-loop-break signal to the queue."
 	  (doupdate)
 	  (set! last-draw-time time-cur))
 
-	(when #t ;; (tick-event? evt)
-	  (usleep (inexact->exact (round (* 1000000.0 tick-duration))))
+	(when #t ;; (idle-event? evt)
+	  (usleep (inexact->exact (round (* 1000000.0 idle-duration))))
 	  (set! last-update-time time-cur))))))
 
 

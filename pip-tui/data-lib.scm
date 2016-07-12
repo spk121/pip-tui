@@ -4,6 +4,12 @@
 	    ->number
 	    ->string/number))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; DATA LIB
+
+;; Some conversion procedures that try harder than the regular
+;; conversion procedures.
+
 (define (->pair x)
   "Extracts the first two elements of vector-like or list-like object X as a pair.
 If X is a thunk, evaluate it and try to extract a pair from the result."
@@ -27,7 +33,7 @@ If X is a thunk, evaluate it and try to extract a pair from the result."
 
 (define (->string x)
   "Creates a string representation of X, which is a string, number,
-boolean or a thunk that returns one of thost types."
+boolean or a thunk that returns one of those types."
   (cond
    [(string? x)
     x]

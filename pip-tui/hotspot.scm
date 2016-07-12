@@ -1,21 +1,7 @@
-;; HOTSPOT
-
-;; A hotspot is highlighted text in a text buffer.  If it occupies
-;; more than one line, it wraps around in a text-like fashion.
-
 (define-module (pip-tui hotspot)
-  ;; #:use-module (ice-9 optargs)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
-  ;; #:use-module (ncurses curses)
-  ;; #:use-module (pip-tui typecheck)
-  ;; #:use-module (pip-tui pip-color-names)
-  ;; #:use-module (pip-tui coords)
   #:use-module (pip-tui string-lib)
-  ;; #:use-module (pip-tui data-lib)
-  ;; #:use-module (pip-tui time)
-  ;; #:use-module (pip-tui render-lib)
-  ;; #:use-module (pip-tui tui-action)
   #:export (
             hotspot?
             hotspot-new
@@ -26,6 +12,12 @@
             hotspots-from-string-list
             in-hotspot?
             ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; HOTSPOT
+
+;; A hotspot is highlighted text in a text buffer.  If it occupies
+;; more than one line, it wraps around in a text-like fashion.
 
 (define-record-type <hotspot>
   (hotspot-new start-y                  ; line #

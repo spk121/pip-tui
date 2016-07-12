@@ -46,7 +46,7 @@ as described by a list of PARAMETERS.  PARAMETERS is a list of 12 numeric values
 which are
 DURATION_ATTACK, DURATION_DECAY, DURATION_SUSTAIN, DURATION_RELEASE in seconds
 FREQUENCY_INITIAL, FREQUENCY_ATTACK, FREQUENCY_SUSTAIN, FREQUENCY_RELEASE in Hz
-AMPLITUDE_ATTACK, AMPLITUDE_SUSTAIN from 0 to 32767
+AMPLITUDE_ATTACK, AMPLITUDE_SUSTAIN from 0.0 to 1.0
 DUTY, which is ratio of up to down in the waveform from ~0.3 to ~0.7,
 WAVEFORM 0=square 1=sine"
   (%tone channel time parameters))
@@ -57,7 +57,7 @@ as described by a list of PARAMETERS.  PARAMETERS is a list of 5 numeric values
 which are
 DURATION_DECAY, DURATION_SUSTAIN in seconds
 FREQUENCY in Hz
-AMPLITUDE_ATTACK, AMPLITUDE_SUSTAIN from 0 to 32767"
+AMPLITUDE_ATTACK, AMPLITUDE_SUSTAIN from 0.0 to 1.0"
   (%simple-tone channel time parameters))
 
 (define (noise channel time parameters)
@@ -66,7 +66,7 @@ as described by a list of PARAMETERS.  PARAMETERS is a list of 12 numeric values
 which are
 DURATION_ATTACK, DURATION_DECAY, DURATION_SUSTAIN, DURATION_RELEASE in seconds
 FREQUENCY_INITIAL, FREQUENCY_ATTACK, FREQUENCY_SUSTAIN, FREQUENCY_RELEASE in Hz
-AMPLITUDE_ATTACK, AMPLITUDE_SUSTAIN from 0 to 32767
+AMPLITUDE_ATTACK, AMPLITUDE_SUSTAIN from 0 to 1.0
 DUTY, which is ratio of up to down in the waveform from ~0.3 to ~0.7,
 WAVEFORM 0=square 1=sine"
   (%noise channel time parameters))
@@ -77,7 +77,7 @@ as described by a list of PARAMETERS.  PARAMETERS is a list of 5 numeric values
 which are
 DURATION_DECAY, DURATION_SUSTAIN in seconds
 FREQUENCY in Hz
-AMPLITUDE_ATTACK, AMPLITUDE_SUSTAIN from 0 to 32767"
+AMPLITUDE_ATTACK, AMPLITUDE_SUSTAIN from 0 to 1.0"
   (%simple-noise channel time parameters))
 
 (define (Beep)
@@ -92,8 +92,6 @@ two parameters: N and TIME-TO-LIVE.  N is the number of samples being
 requested, and TIME-TO-LIVE is the number of microseconds until these
 samples actually play."
   (set! %audio-write-cb func))
-
-
 
 (load-extension "piptui" "pip_pulseaudio_init")
 

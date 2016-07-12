@@ -14,6 +14,7 @@ To build, the code requires or could someday require
 * libunistring
 * fribidi
 * libpng
+* pulseaudio
 * maybe eventually *gstreamer* 
 * maybe eventually *guile-gstreamer* if that can be resurrected
 * maybe eventually *guile-mysql* or *guile-db*

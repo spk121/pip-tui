@@ -1,4 +1,8 @@
 (define-module (pip-tui pip-color-names))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Named indices for the xterm default 256-color colormap
+
 (define-public COLOR_INDEX_BLACK 16)
 (define-public COLOR_INDEX_BLUE4 18)
 (define-public COLOR_INDEX_DARKBLUE 18)

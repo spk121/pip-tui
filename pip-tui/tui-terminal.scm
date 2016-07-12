@@ -35,7 +35,7 @@
   #:use-module (pip-tui action)
   #:use-module (pip-tui tui-action)
   #:export (tui-terminal-new
-            tui-terminal-tick
+            tui-terminal-idle
             TERMINAL_MICROSECONDS_PER_TICK
             ;; tui-terminal-process-event
             %set-hotspot-cur!
@@ -43,7 +43,7 @@
             tui-terminal-set-completion-cb!
             tui-terminal-kbd-action-activate
             tui-terminal-mouse-action-activate
-            tui-terminal-tick-action-activate
+            tui-terminal-idle-action-activate
             tui-terminal-hotspot-cur
             ))
 
@@ -180,10 +180,10 @@ STATE is either 'drawing or 'control."
                        (strlist (string-list-truncate! new-rendered-text n))
                        (new-text (apply string-append strlist)))
               
-                  (move (stdscr) 0 0)
+                  ;; (move (stdscr) 0 0)
                   ;; (addstr (stdscr) (substring text nprev (- (string-length text) nprev)))
-                  (addch (stdscr) (bold (string-ref new-text (1- (string-length new-text)))))
-                  (refresh (stdscr))
+                  ;; (addch (stdscr) (bold (string-ref new-text (1- (string-length new-text)))))
+                  ;; (refresh (stdscr))
                   (if (char-set-contains? char-set:graphic (string-ref new-text (1- (string-length new-text))))
                       (enqueue-symbolic-action 'sound-terminal-glyph-new '())))
                 ;; (enqueue-symbolic-action 'sound-terminal-glyph-new '())
@@ -219,7 +219,7 @@ STATE is either 'drawing or 'control."
                                   (do-background TT
                                                  (compute-coords-list TT))))))
 
-(define (tui-terminal-tick TT)
+(define (tui-terminal-idle TT)
   (render TT))
 
 
@@ -319,11 +319,11 @@ STATE is either 'drawing or 'control."
 
              [else #f])))))
 
-(define tui-terminal-tick-action-activate
+(define tui-terminal-idle-action-activate
   (lambda (TT event state)
-    (when (tick-event? event)
+    (when (idle-event? event)
           (let ([m (event-get-data event)])
-            (tui-terminal-tick TT)))))
+            (tui-terminal-idle TT)))))
 
 (define (tui-terminal-hotspot-cur TT)
   (assert-tui-terminal TT)
