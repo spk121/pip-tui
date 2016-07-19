@@ -1,6 +1,7 @@
 (define-module (pip-tui pulseaudio)
   #:use-module (system foreign)
   #:use-module (rnrs bytevectors)
+  #:use-module (pip-tui action)
   #:export (%audio-buffers
             audio-iterate
             audio-state
@@ -14,7 +15,8 @@
             noise
             simple-noise
             Beep
-	    pulseaudio-set-write-cb!))
+	    pulseaudio-set-write-cb!
+	    pulseaudio-idle-handler))
 
 (define (audio-iterate)
   "This must be called at regular intervals in the main
@@ -92,6 +94,14 @@ two parameters: N and TIME-TO-LIVE.  N is the number of samples being
 requested, and TIME-TO-LIVE is the number of microseconds until these
 samples actually play."
   (set! %audio-write-cb func))
+
+(define (audio-idle-action-activate TT event state)
+  (when (idle-event? event)
+        (audio-iterate)))
+
+(define (pulseaudio-idle-handler)
+  (action-new "audio-idle" #t '() audio-idle-action-activate #f))
+
 
 (load-extension "piptui" "pip_pulseaudio_init")
 
