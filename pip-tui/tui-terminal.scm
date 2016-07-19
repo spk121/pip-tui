@@ -22,6 +22,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (ncurses curses)
+  #:use-module (pip-tui action)
   #:use-module (pip-tui typecheck)
   #:use-module (pip-tui pip-color-names)
   #:use-module (pip-tui coords)
@@ -41,9 +42,7 @@
             %set-hotspot-cur!
             tui-terminal-get-completion-cb
             tui-terminal-set-completion-cb!
-            tui-terminal-kbd-action-activate
-            tui-terminal-mouse-action-activate
-            tui-terminal-idle-action-activate
+            tui-terminal-action-handler
             tui-terminal-hotspot-cur
             ))
 
@@ -231,99 +230,104 @@ STATE is either 'drawing or 'control."
 
 (define tui-terminal-kbd-action-activate
   (lambda (TT event state)
-    (when (kbd-event? event)
-          (let ((c (event-get-data event)))
-            (cond
-             ;; In 'drawing mode, KEY_ENTER or newline causes drawing to
-             ;; complete.
-             [(and (eq? 'drawing (%state TT))
-                   (or (eqv? c KEY_ENTER)
-                       (eqv? c #\newline)))
-              (%set-state! TT 'control)
-              (%set-hotspot-cur! TT 0)
-              (render TT)
+    (let ((c (event-get-data event)))
+      (cond
+       ;; In 'drawing mode, KEY_ENTER or newline causes drawing to
+       ;; complete.
+       [(and (eq? 'drawing (%state TT))
+	     (or (eqv? c KEY_ENTER)
+		 (eqv? c #\newline)))
+	(%set-state! TT 'control)
+	(%set-hotspot-cur! TT 0)
+	(render TT)
 
-              ;; Return TRUE to indicate that we've process this event.
-              #t]
+	;; Return TRUE to indicate that we've process this event.
+	#t]
 
-             ;; In control mode, if we're acting like the blog-like entries in
-             ;; Fallout 4...  A hotspot sits in its own line.  The whole line is
-             ;; inverse if it is selected.
+       ;; In control mode, if we're acting like the blog-like entries in
+       ;; Fallout 4...  A hotspot sits in its own line.  The whole line is
+       ;; inverse if it is selected.
+       
+       ;; The 1st hotspot is initialially selected.
 
-             ;; The 1st hotspot is initialially selected.
+       ;; KEY_UP, KEY_DOWN move between entries (no wrap around).
+       [(and (eq? 'control (%state TT))
+	     (eqv? c KEY_UP))
+	(%set-hotspot-cur! TT (max 0 (1- (%hotspot-cur TT))))
+	(render TT)
+	;; Return TRUE to indicate that we've processed the event, but,
+	;; aren't complete.
+	#t]
 
-             ;; KEY_UP, KEY_DOWN move between entries (no wrap around).
-             [(and (eq? 'control (%state TT))
-                   (eqv? c KEY_UP))
-              (%set-hotspot-cur! TT (max 0 (1- (%hotspot-cur TT))))
-              (render TT)
-              ;; Return TRUE to indicate that we've processed the event, but,
-              ;; aren't complete.
-              #t]
+       [(and (eq? 'control (%state TT))
+	     (eqv? c KEY_DOWN))
+	(%set-hotspot-cur! TT (min (1- (hotspot-count TT)) (1+ (%hotspot-cur TT))))
+	(render TT)
+	;; Return TRUE to indicate that we've processed the event, but,
+	;; aren't complete.
+	#t]
 
-             [(and (eq? 'control (%state TT))
-                   (eqv? c KEY_DOWN))
-              (%set-hotspot-cur! TT (min (1- (hotspot-count TT)) (1+ (%hotspot-cur TT))))
-              (render TT)
-              ;; Return TRUE to indicate that we've processed the event, but,
-              ;; aren't complete.
-              #t]
+       ;; KEY_ENTER selects the current entry.
+       [(and (eq? 'control (%state TT))
+	     (or (eqv? c KEY_ENTER)
+		 (eqv? c #\newline)))
+	(render TT)
 
-             ;; KEY_ENTER selects the current entry.
-             [(and (eq? 'control (%state TT))
-                   (or (eqv? c KEY_ENTER)
-                       (eqv? c #\newline)))
-              (render TT)
-
-              ;; Notify listeners that a selection has been made
-              (when (procedure? (%completion-cb TT))
-                    ((%completion-cb TT) TT))
-
-              ;; Success, return the selection
-              #t]
-             
-             [else #f])))))
+	;; Notify listeners that a selection has been made
+	(when (procedure? (%completion-cb TT))
+	  ((%completion-cb TT) TT))
+	
+	;; Success, return the selection
+	#t]
+       
+       [else #f]))))
 
 (define tui-terminal-mouse-action-activate
   (lambda (TT event state)
-    (when (mouse-event? event)
-          (let ([m (event-get-data event)])
-            (cond
-             [(and (eq? 'drawing (%state TT))
-                   (wenclose? (%panel TT) (third m) (second m))
-                   (or (eq? BUTTON1_PRESSED (fifth m))
-                       (eq? BUTTON1_CLICKED (fifth m)))
-                   )
-              (%set-state! TT 'control)
-              (%set-hotspot-cur! TT 0)
-              (render TT)
-              ;; Return TRUE to indicate that we've used up this event.
-              #t]
+    (let ([m (event-get-data event)])
+      (cond
+       [(and (eq? 'drawing (%state TT))
+	     (wenclose? (%panel TT) (third m) (second m))
+	     (or (eq? BUTTON1_PRESSED (fifth m))
+		 (eq? BUTTON1_CLICKED (fifth m)))
+	     )
+	(%set-state! TT 'control)
+	(%set-hotspot-cur! TT 0)
+	(render TT)
+	;; Return TRUE to indicate that we've used up this event.
+	#t]
 
-             [(and (eq? 'control (%state TT))
-                   (or (eq? BUTTON1_PRESSED (fifth m))
-                       (eq? BUTTON1_CLICKED (fifth m))))
-              (let ([pos (mouse-trafo (%panel TT) (third m) (second m) #f)])
-                (when pos
-                      (let ([spot (check-for-hotspot TT (car pos) (cadr pos))])
-                        (when spot
-                              (%set-hotspot-cur! TT spot)
-                              (render TT)
+       [(and (eq? 'control (%state TT))
+	     (or (eq? BUTTON1_PRESSED (fifth m))
+		 (eq? BUTTON1_CLICKED (fifth m))))
+	(let ([pos (mouse-trafo (%panel TT) (third m) (second m) #f)])
+	  (when pos
+	    (let ([spot (check-for-hotspot TT (car pos) (cadr pos))])
+	      (when spot
+		(%set-hotspot-cur! TT spot)
+		(render TT)
 
-                              ;; Notify listeners that a selection has been made
-                              (when (procedure? (%completion-cb TT))
-                                    ((%completion-cb TT) TT))
+		;; Notify listeners that a selection has been made
+		(when (procedure? (%completion-cb TT))
+		  ((%completion-cb TT) TT))
+		
+		;; Return #t to indicate we've used up this event.
+		#t))))]
 
-                              ;; Return #t to indicate we've used up this event.
-                              #t))))]
+       [else #f]))))
 
-             [else #f])))))
+(define (tui-terminal-action-activate TT event state)
+  (cond
+   ((idle-event? event)
+    (tui-terminal-idle TT))
+   ((mouse-event? event)
+    (tui-terminal-mouse-action-activate TT event state))
+   ((kbd-event? event)
+    (tui-terminal-kbd-action-activate TT event state))))
 
-(define tui-terminal-idle-action-activate
-  (lambda (TT event state)
-    (when (idle-event? event)
-          (let ([m (event-get-data event)])
-            (tui-terminal-idle TT)))))
+(define (tui-terminal-action-handler)
+  (action-new "tui-terminal" #t '() tui-terminal-action-activate #t))
+
 
 (define (tui-terminal-hotspot-cur TT)
   (assert-tui-terminal TT)

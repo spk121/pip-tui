@@ -29,38 +29,15 @@
 ;; Make a terminal widget
 (define (finalize term)
   (enqueue-symbolic-action 'main-loop-detach term)
-  ;; (tui-terminal-hide term)
   (enqueue-symbolic-action 'main-loop-break term))
 
 (define TT (tui-terminal-new 4 1 25 45 ceefax-text-1
 			     #:completion-cb finalize))
 
-
 ;; Make an action map
 (define amap (action-map-new '()))
-(action-map-add-action!
- amap
- (action-new "tui-terminal-mouse" #t '() tui-terminal-mouse-action-activate #t)
- TT)
-
-(action-map-add-action!
- amap
- (action-new "tui-terminal-kbd" #t '() tui-terminal-kbd-action-activate #f)
- TT)
-
-(action-map-add-action!
- amap
- (action-new "tui-terminal-idle" #t '() tui-terminal-idle-action-activate #f)
- TT)
-
-(define (audio-idle-action-activate TT event state)
-  (when (idle-event? event)
-        (audio-iterate)))
-
-(action-map-add-action!
- amap
- (action-new "audio-idle" #t '() audio-idle-action-activate #f)
- #f)
+(action-map-add-action! amap tui-terminal-action-handler TT)
+(action-map-add-action! amap pulseaudio-idle-handler #f)
 
 (define (sound-action-activate TT event state)
   (when (symbolic-event? event)
@@ -68,10 +45,6 @@
 	(when (or (eqv? (car c) 'sound-terminal-glyph-new)
 		  (eqv? (car c) 'sound-terminal-drawing-end))
               (simple-tone 0 0 (list 0.001 0.01 (+ 5000 (random 1)) 0.5 0.4))
-              ;; (bytevector-s16-set! (vector-ref %audio-buffers 0) 0 8000 (native-endianness))
-              ;; (bytevector-s16-set! (vector-ref %audio-buffers 0) 1 -8000 (native-endianness))
-              ;; (bytevector-s16-set! (vector-ref %audio-buffers 0) 0 8000 (native-endianness))
-              ;; (bytevector-s16-set! (vector-ref %audio-buffers 0) 3 -8000 (native-endianness))
               #f
               ))))
 
@@ -83,18 +56,7 @@
 (main-loop amap)
 
 (endwin)
-(newline)
-(newline)
-(newline)
-(newline)
-(newline)
-(newline)
-(newline)
-(newline)
-(newline)
-(newline)
-(newline)
-(newline)
+
 (newline)
 (newline)
 (newline)

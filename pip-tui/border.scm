@@ -1,4 +1,5 @@
 (define-module (pip-tui border)
+  #:use-module (ncurses curses)
   #:export (border-left-char
 	    border-right-char
 	    border-top-char
