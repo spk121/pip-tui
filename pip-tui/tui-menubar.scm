@@ -4,6 +4,10 @@
   #:use-module (ncurses curses)
   #:use-module (ncurses panel)
   #:use-module (pip-tui string-lib)
+  #:use-module (pip-tui event)
+  #:use-module (pip-tui action)
+  #:use-module (pip-tui action-map)
+  #:use-module (pip-tui tui-action)
   #:use-module (pip-tui data-lib)
   #:use-module (pip-tui border)
   #:use-module (pip-tui coords)
@@ -16,6 +20,7 @@
 	    tui-menubar-show
 	    tui-menubar-resize
 	    %tui-menubar-get-panel
+	    tui-menubar-action-handler
 	    ))
 
 ;;(define *debug-port* (open-file "tui_menubar_debug.out" "w0"))
@@ -382,8 +387,8 @@ of 'top, 'center, or 'bottom."
       ;; enqueue a signal
       ((lambda (K)
 	 (when K
-	   (enqueue-symbolic-action 'menubar-keypress `(,K . ,TM))))
-       (assoc-ref (%tui-menubar-key-label-alist TM) key)))))
+	   (enqueue-symbolic-action 'menubar-keypress (list key K TM))))
+       (assoc-ref (%tui-menubar-get-key-label-alist TM) key)))))
 
 (define (tui-menubar-action-activate TT event state)
   (cond
