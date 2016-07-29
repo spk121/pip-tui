@@ -29,14 +29,21 @@ To build, the code requires or could someday require
 - [x] Progress Bar: (string/number) a short text and a progress bar
 - [x] Terminal: (string) auto wrapping text that reveals itself one
       character at a time. Bracketed text are clickable links.
-- [ ] Menu Bar: (alist key string) a small menu, arranged horizontally
-      in one line.
 - [ ] Message Dialog (string x3): wrapped, centered text in a frame,
       with one or two buttons.
-- [ ] Menu: (list) a scrolling list of elements, where one can be selected
+- [x] Menu Bar: (alist key string) a small menu, arranged horizontally
+      in one line, that associates keys with actions
+- [ ] List Menu: (list) a scrolling list of elements, where one can be
+      selected.
+- [ ] Alphabetized List Menu: (list) a scrolling list of elements,
+      where one can be selected.
 - [ ] Description Menu: (alist) a scrolling list of elements and short
-      descrpitions
-- [ ] Info Menu: (alist) a scrolling list of elements with long descriptions
+      descrpitions.  The short descriptions are on the same line as
+      the elements.
+- [ ] Info Menu: (alist) a scrolling list of elements with long
+      descriptions.  The long description of the currently selected
+      element is displayed as wrapped multi-line text to the right of
+      the list of elements.      
 - [ ] Image: (u32 array) an Unicode-art rendering of an RGB32 array
 - [ ] Form: (?) a form with fillable fields
 - [ ] Text Entry: (?) a multi-line text entry widget

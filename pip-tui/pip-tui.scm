@@ -2,6 +2,11 @@
 (define-module (pip-tui tui)
   #:use-module (pip-tui menu)
   #:export (blah)
-  #:re-export (blah blah))
+  #:re-export (
+	       ;; from (pip-tui menu)
+	       listmenu-new
+	       
+
+	       ))
 
   

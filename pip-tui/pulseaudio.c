@@ -115,6 +115,24 @@ void audio_model_dequeue(unsigned n)
     }
 }
 
+#define SQUARE_WAVE (0)
+#define SQUARE_WAVE_FUNC(x) (1.0)
+#define SINE_WAVE (1)
+#define SINE_WAVE_FUNC(x) (sin(x))
+#define PLUCKED_STRING (2)
+#define PLUCKED_STRING_FUNC(x) (sin(x) - 0.11*sin(3.0*(x)) + 0.04*sin(5.0*(x)))
+#define STRUCK_STRING (3)
+#define STRUCK_STRING_FUNC(x) (sin(x) + 0.25*sin(2.0*(x)) + 0.11*sin(3.0*(x)))
+#define HORN_WAVE (4)
+#define HORN_WAVE_FUNC(x) (sin(x) + sin(2.0*(x)) + 0.7*sin(3.0*(x)))
+#define REED_WAVE (5)
+#define REED_WAVE_FUNC(x) (sin(x) + 0.5*sin(3.0*(x)) + 0.1*sin(4.0*(x))
+                           
+                               
+
+
+
+
 static void
 generate_tone_data(double D_attack, double D_decay, double D_sustain,
                    double D_release, double F_initial, double F_attack,
@@ -203,6 +221,8 @@ generate_tone_data(double D_attack, double D_decay, double D_sustain,
                 buffer[i] = level_a;
             else if (waveform == 1)
                 buffer[i] = level_a * sin(M_PI * (t - t_start) / (period * duty));
+            else if (waveform == 2)
+                buffer[i] = level_a * func ( (t - t_start) / (period * duty));
         }
         else if (t - t_start < period)
         {
