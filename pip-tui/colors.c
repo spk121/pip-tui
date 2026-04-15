@@ -18,7 +18,7 @@ static inline double transform2 (double a)
   if (a > 0.008856)
     return cbrt(a);
 
-  return a * 7.787 + 0.00886;
+  return a * 7.787 + 0.13793;
 }
 
 #define REFY 100.0
