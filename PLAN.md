@@ -139,3 +139,112 @@ Still open:
   the environment where the port was done. The next step is to install
   guile-ncurses 3.x, run `make && make image`, and run each demo with
   `./uninstalled-env`.
+
+## Open question: should this be SDL instead of guile-ncurses?
+
+The Pip-Boy in the Fallout games is not really a text terminal. It is
+a monochrome raster display pretending to be one: green-on-black with
+scanlines and phosphor glow, an animated Vault Boy, line-drawn boxes
+that wrap the selected tab (with the tab bar's rule broken around the
+selection), small monochrome pictures beside item descriptions, and a
+map. The question is whether a terminal is the right medium for that.
+
+### What a terminal can do
+
+More than it first seems.
+
+- **Boxes and tab outlines.** Box-drawing characters already cover
+  this. A selected tab is a `┌──┐` above the label and `┘  └` cut into
+  the rule below it. `border.scm` has the pieces.
+- **Monochrome pictures.** Block characters give sub-cell resolution:
+  half blocks give 1×2 pixels per cell, quadrants 2×2 (what
+  `pip-image.scm` does now), the Unicode 13 sextants 2×3, and Braille
+  2×4. In a single green tint, monochrome is the easy case: 2×4 Braille
+  on an 80×24 terminal is 160×96 pixels, about the size of a Vault Boy
+  sprite.
+- **Simple animation.** The main loop already redraws at 60 fps, and a
+  few frames of a Braille or quadrant sprite swapped on idle events
+  costs very little. The terminal widget's typing effect is the same
+  mechanism.
+- **Colour.** Most terminals do 256 colours, and many do 24-bit
+  colour, which is enough for a convincing green ramp.
+
+What it cannot do: scanlines, glow, curvature, real fonts, pixel-exact
+images, or any graphics finer than a cell grid. Terminal graphics
+protocols (sixel, kitty, iTerm2) can draw real bitmaps, but ncurses
+doesn't know about them, so mixing the two means fighting ncurses over
+who owns the screen, and support varies a lot between terminals.
+
+### What SDL would give
+
+- **Fidelity.** Real CRT effects with a shader pass, real bitmaps,
+  smooth sprite animation, any font, and boxes and lines at pixel
+  precision. It would actually look like the Pip-Boy.
+- **Audio in the same library.** SDL_mixer could replace the
+  hand-written PulseAudio engine, and covers sound effects and local
+  OGG/MP3 playback. Icecast streams would still need an HTTP fetch
+  feeding a decoder, or the external-player approach from Phase 4.
+- **Hardware.** The real-world Pip-Boy builds are a Raspberry Pi with
+  a small LCD and some buttons, not a terminal. SDL runs fullscreen
+  there without X (KMS/DRM) and handles gamepads and rotary encoders.
+- **Guile bindings exist.** guile-sdl2 is a reasonably complete
+  binding, and Chickadee builds a 2D game toolkit with sprites, fonts
+  and shaders on top of it.
+
+### What SDL would cost
+
+- **It stops being a TUI.** No running over SSH, no running inside an
+  existing terminal session. Arguably the charm of the project is a
+  Pip-Boy you can run in xterm.
+- **Text layout becomes our problem.** ncurses (with libunistring)
+  handles cell widths, wide CJK characters and combining marks.
+  With SDL, text shaping and measurement come from SDL_ttf or
+  Chickadee, and bidi and wrapping have to be redone in pixels. Or the
+  renderer draws a fixed character grid itself, which is half a
+  terminal emulator.
+- **Lose ncurses menu and form.** Phase 2 planned to build List Menu
+  and Form on the ncurses menu and form libraries; under SDL those are
+  hand-written.
+- **A rewrite of the drawing layer.** Though that layer is smaller than
+  it sounds: there are roughly 60 direct ncurses calls, concentrated in
+  `render-lib.scm`, the four widgets and `tui-action.scm`. Most of the
+  code (events, actions, hotspots, string wrapping, colour matching,
+  image dithering) doesn't touch ncurses at all.
+
+### A middle path: keep the cell grid, abstract the backend
+
+The widgets already think in a grid of character cells. That model
+fits both media: ncurses draws the grid in a terminal, and an SDL
+backend draws the same grid as glyphs from a bitmap font, plus a
+pixel layer for images and sprites and a CRT shader over everything.
+The widget code stays the same; the SDL backend just gets to cheat
+where the terminal can't. This is how many roguelikes work
+(libtcod, BearLibTerminal).
+
+That would change the plan in three places:
+
+1. **Phase 1, shared widget base:** route all drawing through a small
+   backend interface (put a styled string at y,x; fill a region; draw a
+   box; show, hide and stack a panel; get the next input event)
+   instead of calling ncurses from widgets. `render-lib.scm` becomes
+   that interface, with an ncurses implementation first.
+2. **Phase 2:** write List Menu and Form on pip-tui's own primitives
+   rather than the ncurses menu and form libraries, so they work on
+   both backends. A bit more work, but it also removes the menu
+   library's limits the `list-menu.scm` comments already ran into
+   (no custom overflow arrows).
+3. **Phase 4:** add the SDL backend (guile-sdl2 or Chickadee) as the
+   multimedia step: grid renderer, sprite and image layer, CRT
+   shader, SDL_mixer audio. The image widget then draws Braille or
+   quadrants on ncurses and real pixels on SDL.
+
+### Recommendation
+
+Don't switch outright. The terminal is part of the project's charm,
+and it gets surprisingly close with box-drawing tab outlines and
+Braille sprites. But make the backend abstraction part of Phase 1,
+before more widgets are written directly against ncurses, so an SDL
+backend stays a Phase 4 addition rather than a rewrite. The decision
+point is the start of Phase 1: once List Menu and Form are built on
+the ncurses menu and form libraries, switching gets much more
+expensive.
