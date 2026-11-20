@@ -2,11 +2,7 @@
   #:use-module (ice-9 optargs)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
-  #:use-module (ncurses curses)
-  #:use-module (ncurses panel)
   #:use-module (pip-tui typecheck)
-  #:use-module (pip-tui pip-color-names)
-  #:use-module (pip-tui time)
   #:use-module (pip-tui action)
   #:use-module (pip-tui event)
   #:export (;; action-entry?

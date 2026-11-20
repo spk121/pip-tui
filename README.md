@@ -8,17 +8,30 @@ application written in those widgets. The widget API is in the GNU
 Guile dialect of Scheme.  The code is a mixture of GNU Guile dialect
 of Scheme and of C.
 
+See [PLAN.md](PLAN.md) for the prioritized plan to finish the project.
+
 To build, the code requires or could someday require
-* guile-2.0.x
-* guile-ncurses-1.7
+* guile-3.0.x
+* guile-ncurses-3.x (for the widgets; not needed for `make core`)
 * libunistring
 * fribidi
-* libpng
-* pulseaudio
+* libpng (only for `make media`)
+* pulseaudio (only for `make media`)
 * maybe eventually *gstreamer* 
 * maybe eventually *guile-gstreamer* if that can be resurrected
 * maybe eventually *guile-mysql* or *guile-db*
 * maybe eventually *gpsd*
+
+## Building
+
+```sh
+make              # core and TUI modules (needs guile-ncurses)
+make core         # only the modules that don't need guile-ncurses
+make media        # PNG and PulseAudio extensions
+make image        # image renderer (needs tui and media)
+make check        # unit tests (needs only `make core`)
+./uninstalled-env guile examples/tui-label-demo.scm
+```
 
 ## TODO
 ### Widget Containers

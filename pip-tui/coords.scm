@@ -1,8 +1,8 @@
 (define-module (pip-tui coords)
-  #:use-module (ncurses curses)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (coords-new
+	    coords?
 	    coords-get-start-y
 	    coords-get-start-x
 	    coords-get-height
@@ -15,7 +15,8 @@
 	    coords-adjust
 	    window-relative-coords
 	    window-absolute-coords
-	    coords-zero-area?))
+	    coords-zero-area?
+	    receive-coords))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; COORDS
@@ -58,21 +59,23 @@ DELTA-START-Y, DELTA-START-X, DELTA-HEIGHT, DELTA-WIDTH"
 (define (window-relative-coords win)
   "Given an ncurses panel window WIN, this returns a COORDS struct
 with the 0,0 as the top-left corner and dimensions of the panel."
-  (let ((yx (getmaxyx win)))
+  ;; (ncurses curses) is referenced lazily so that the pure coords
+  ;; procedures can be used without guile-ncurses.
+  (let ((yx ((@ (ncurses curses) getmaxyx) win)))
     (coords-new 0 0 (first yx) (second yx))))
 
 (define (window-absolute-coords win)
   "Given an ncurses window WIN, this returns a COORDS struct with the
 top-left corner and the dimensions of the panel."
-  (let ((maxyx (getmaxyx win))
-	(begyx (getbegyx win)))
+  (let ((maxyx ((@ (ncurses curses) getmaxyx) win))
+	(begyx ((@ (ncurses curses) getbegyx) win)))
     (coords-new (first begyx) (second begyx) (first maxyx) (second maxyx))))
 
 (define (coords-zero-area? C)
   "Returns #t if the area of the region is zero, e.g.
 if the width is zero, the height is zero, or both are zero."
-  (and (zero? (coords-get-width C))
-       (zero? (coords-get-height C))))
+  (or (zero? (coords-get-width C))
+      (zero? (coords-get-height C))))
 
 (define-syntax-rule (receive-coords vars vals . body)
   (call-with-values (lambda () vals)

@@ -1,9 +1,11 @@
 #include <libguile.h>
 #include <pulse/pulseaudio.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 #include <math.h>
 #include <time.h>
-#include <stdbool.h>
+#include "pulseaudio.h"
 
 /* This is a simple audio model and control, using Pulseaudio primitives.
  *
@@ -221,8 +223,8 @@ generate_tone_data(double D_attack, double D_decay, double D_sustain,
                 buffer[i] = level_a;
             else if (waveform == 1)
                 buffer[i] = level_a * sin(M_PI * (t - t_start) / (period * duty));
-            else if (waveform == 2)
-                buffer[i] = level_a * func ( (t - t_start) / (period * duty));
+            /* FIXME: waveform 2 was meant to call a user-supplied
+               wave function, but that was never written. */
         }
         else if (t - t_start < period)
         {
@@ -234,7 +236,8 @@ generate_tone_data(double D_attack, double D_decay, double D_sustain,
         i ++;
         t += 1.0 / (double) AUDIO_SAMPLE_RATE_IN_HZ;
     }
-#if 1
+#if 0
+    /* Debugging aid: dump every 100th generated waveform to a file. */
     {
         if (count % 100 == 1) {
             FILE *fp;
@@ -916,7 +919,7 @@ pip_pulseaudio_init ()
     {
         am_channel_bytevectors[i] = scm_c_make_bytevector (AUDIO_BUFFER_SIZE * sizeof (int16_t));
         scm_bytevector_fill_x (am_channel_bytevectors[i], scm_from_uint(0));
-        am_channels[i] = SCM_BYTEVECTOR_CONTENTS(am_channel_bytevectors[i]);
+        am_channels[i] = (int16_t *) SCM_BYTEVECTOR_CONTENTS(am_channel_bytevectors[i]);
         scm_c_vector_set_x (store, i, am_channel_bytevectors[i]);
     }
 

@@ -76,3 +76,6 @@ version.texi
 # from automake tests
 *.trs
 *.log
+
+# build products
+*.so

@@ -1,7 +1,6 @@
 (define-module (pip-tui event)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
-  #:use-module (ncurses curses)
   #:use-module (pip-tui typecheck)
   #:export (event-get-data
 	    assert-event
@@ -47,7 +46,9 @@
 (define-syntax assert-mevent
   (syntax-rules ()
     ((_ val)
-     (typecheck val 'mevent mevent?))))
+     ;; (ncurses curses) is referenced lazily so that this module can
+     ;; be loaded, e.g. by unit tests, without guile-ncurses.
+     (typecheck val 'mevent (@ (ncurses curses) mevent?)))))
 
 (define (kbd-event-new key-or-char)
   ;; FIXME assert integer or char

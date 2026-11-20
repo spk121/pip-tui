@@ -124,6 +124,3 @@ line break if the width of a line is not to exceed WIDTH cells."
 			(list '* size_t int int int '* '* '*))))
 
 (initialize)
-
-
-(string-width "hello")

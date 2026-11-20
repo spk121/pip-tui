@@ -51,5 +51,9 @@
 #define BIDI_LOCAL
 #endif
 
+/* The pip-tui extensions share one set of visibility macros. */
+#define PIP_API BIDI_API
+#define PIP_LOCAL BIDI_LOCAL
+
 #endif
 

@@ -424,4 +424,4 @@ the color pair index associated with this pair of green levels."
    (pip-green-level->color-index bg)))
 
 
-(load-extension "piptui.so" "pip_colors_init")
+(load-extension "piptui" "pip_colors_init")
