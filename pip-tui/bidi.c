@@ -19,8 +19,10 @@ bidi_string_logical_to_visual (SCM str, SCM alignment)
   uint32_t *c_u32str_out = (uint32_t *) malloc ((c_len_in + 1) * sizeof (uint32_t));
   fribidi_log2vis(c_u32str_in, c_len_in, &c_alignment, c_u32str_out, 0, 0, 0);
 
-  return scm_from_utf32_stringn (c_u32str_out, c_len_in);
-  
+  SCM ret = scm_from_utf32_stringn ((scm_t_wchar *) c_u32str_out, c_len_in);
+  free (c_u32str_in);
+  free (c_u32str_out);
+  return ret;
 }
 
 SCM
@@ -38,6 +40,8 @@ bidi_get_par_direction (SCM str)
   fribidi_get_bidi_types (c_str, len, types);
   
   FriBidiParType ptype = fribidi_get_par_direction (types, len);
+  free (types);
+  free (c_str);
   return scm_from_int (ptype);
 }
 

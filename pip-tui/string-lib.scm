@@ -274,7 +274,7 @@ are replaced with zero, one, or two spaces."
   "Return the longest substring of str that fits in WIDTH
 cells."
   (let ((i (string-length str)))
-    (while (> (string-length (substring str 0 i)) width)
+    (while (> (string-width (substring str 0 i)) width)
       (set! i (1- i)))
     (substring str 0 i)))
 

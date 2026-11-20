@@ -103,5 +103,5 @@ samples actually play."
   (action-new "audio-idle" #t '() audio-idle-action-activate #f))
 
 
-(load-extension "piptui" "pip_pulseaudio_init")
+(load-extension "piptui-pulseaudio" "pip_pulseaudio_init")
 

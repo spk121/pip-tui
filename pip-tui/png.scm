@@ -8,4 +8,4 @@
 an array of the contents of the image as RGBA32."
   (%read-png filename))
 
-(load-extension "piptui.so" "pip_png_init")
+(load-extension "piptui-png" "pip_png_init")

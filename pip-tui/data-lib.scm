@@ -20,8 +20,8 @@ If X is a thunk, evaluate it and try to extract a pair from the result."
     (cons (list-ref x 0) (list-ref x 1))]
    [(vector? x)
     (cons (vector-ref x 0) (vector-ref x 1))]
-   [(uniform-vector? x)
-    (cons (uniform-vector-ref x 0) (uniform-vector-ref x 1))]
+   ;; SRFI-4 uniform vectors and bytevectors are handled by the
+   ;; generic array? clause below.
    [(bitvector? x)
     (cons (bitvector-ref x 0) (bitvector-ref x 1))]
    [(array? x)
